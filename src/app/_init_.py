@@ -1,10 +1,9 @@
-## Connect DB
+from flask import Flask
+
+app = Flask(__name__)
+
+#connect TursoDB
 import turso
 
-con = turso.connect("sqlite.db")
+con = turso.connect("bank.db")
 cur = con.cursor()
-
-## QUERY DB
-res = cur.execute("SELECT * FROM users")
-users = res.fetchall()
-print(users)
