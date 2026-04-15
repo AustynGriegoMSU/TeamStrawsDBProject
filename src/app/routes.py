@@ -21,7 +21,6 @@ def password_matches(submitted_password: str, stored_password) -> bool:
 def index() -> str:
     return render_template('index.html')
 
-
 @app.route('/customer/home')
 @login_required
 def customer_home() -> str:
@@ -88,20 +87,30 @@ def signup() -> str:
 def login() -> str:
     form: LoginForm = LoginForm()
     if form.validate_on_submit():
-        if form.role.data == 'customer':
-            row = cur.execute(
-                'SELECT "Customer ID", "First Name", "Last Name", "Username", "Password" FROM Customer WHERE "Username" = ?',
-                (form.username.data,)
-            ).fetchone()
-        else:
-            row = cur.execute(
-                'SELECT "Employee ID", "First Name", "Last Name", "Username", "Password" FROM Employee WHERE "Username" = ?',
-                (form.username.data,)
-            ).fetchone()
+        customer_row = cur.execute(
+            'SELECT "Customer ID", "First Name", "Last Name", "Username", "Password" FROM Customer WHERE "Username" = ?',
+            (form.username.data,)
+        ).fetchone()
+        employee_row = cur.execute(
+            'SELECT "Employee ID", "First Name", "Last Name", "Username", "Password" FROM Employee WHERE "Username" = ?',
+            (form.username.data,)
+        ).fetchone()
+
+        role = None
+        row = None
+        if customer_row and employee_row:
+            form.username.errors.append('Username is duplicated across user types. Please contact support.')
+            return render_template('login.html', form=form)
+        if customer_row:
+            role = 'customer'
+            row = customer_row
+        elif employee_row:
+            role = 'employee'
+            row = employee_row
 
         if row and password_matches(form.passwd.data, row[4]):
             user = User(
-                role=form.role.data,
+                role=role,
                 record_id=row[0],
                 username=row[3],
                 first_name=row[1],
@@ -109,7 +118,7 @@ def login() -> str:
             )
             login_user(user)
             flash('Logged in successfully.')
-            if form.role.data == 'customer':
+            if role == 'customer':
                 return redirect(url_for('customer_home'))
             return redirect(url_for('index'))
         else:

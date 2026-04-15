@@ -16,7 +16,6 @@ class SignUpForm(FlaskForm):
     submit = SubmitField('Confirm')
 
 class LoginForm(FlaskForm):
-    role = SelectField('User Type', choices=[('customer', 'Customer'), ('employee', 'Employee')], validators=[DataRequired()])
     username = StringField('Username', validators=[DataRequired()])
     passwd = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Confirm')

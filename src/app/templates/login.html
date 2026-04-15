@@ -11,12 +11,6 @@
         <!-- Renders hidden fields, including CSRF token -->
         {{ form.hidden_tag() }}
         <p>
-            {{ form.role.label }} <br> {{ form.role() }}
-            {% for error in form.role.errors %}
-                <span style="color:red;">{{ error }}</span>
-            {% endfor %}
-        </p>
-        <p>
             {{ form.username.label }} <br> {{ form.username(size=30) }}
             {% for error in form.username.errors %}
                 <span style="color:red;">{{ error }}</span>
