@@ -18,42 +18,53 @@
         <!-- Renders hidden fields, including CSRF token -->
         {{ form.hidden_tag() }}
         <p>
-            <!-- Renders 'ID' label on signup form -->
-            {{ form.id.label }} <br> {{ form.id(size=15) }}
-            <!-- Error message shows if ID is already in use -->
-            {% for error in form.id.errors %}
+            {{ form.first_name.label }} <br> {{ form.first_name(size=30) }}
+            {% for error in form.first_name.errors %}
                 <span style="color:red;">{{ error }}</span>
             {% endfor %}
         </p>
         <p>
-            <!-- Renders 'Name' label on signup form -->
-            {{ form.name.label }} <br> {{ form.name(size=30) }}
-            <!-- Error message shows if name is left blank -->
-            {% for error in form.name.errors %}
+            {{ form.last_name.label }} <br> {{ form.last_name(size=30) }}
+            {% for error in form.last_name.errors %}
                 <span style="color:red;">{{ error }}</span>
             {% endfor %}
         </p>
-        <p>        
-            <!-- Renders 'About' label on signup form -->
-            {{ form.about.label }} <br> {{ form.about(rows=5, cols=30) }}
+        <p>
+            {{ form.address.label }} <br> {{ form.address(rows=3, cols=30) }}
+            {% for error in form.address.errors %}
+                <span style="color:red;">{{ error }}</span>
+            {% endfor %}
         </p>
         <p>
-            <!-- Renders 'Password' label on signup form -->
+            {{ form.phone.label }} <br> {{ form.phone() }}
+            {% for error in form.phone.errors %}
+                <span style="color:red;">{{ error }}</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.username.label }} <br> {{ form.username(size=30) }}
+            {% for error in form.username.errors %}
+                <span style="color:red;">{{ error }}</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.ssn.label }} <br> {{ form.ssn() }}
+            {% for error in form.ssn.errors %}
+                <span style="color:red;">{{ error }}</span>
+            {% endfor %}
+        </p>
+        <p>
             {{ form.passwd.label }} <br> {{ form.passwd(size=30) }}
-            <!-- Error message shows if password doesn't meet requirements -->
             {% for error in form.passwd.errors %}
                 <span style="color:red;">{{ error }}</span>
             {% endfor %}
         </p>
-        <p>        
-            <!-- Renders 'Confirm Password' label on signup form -->
+        <p>
             {{ form.passwd_confirm.label }} <br> {{ form.passwd_confirm(size=30) }}
-             <!-- Error message shows if passwords do not match -->
             {% for error in form.passwd_confirm.errors %}
                 <span style="color:red;">{{ error }}</span>
             {% endfor %}
         </p>
-        <!-- Renders submit button on signup form -->
         <p>{{ form.submit() }}</p>
     </form>
 {% endblock %}

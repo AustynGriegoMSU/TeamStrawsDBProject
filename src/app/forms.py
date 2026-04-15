@@ -1,16 +1,20 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, TextAreaField, SubmitField
-from wtforms.validators import DataRequired, Length
+from wtforms import StringField, PasswordField, TextAreaField, SubmitField, IntegerField, SelectField
+from wtforms.validators import DataRequired, Length, Optional
 
 class SignUpForm(FlaskForm):
-    id = StringField('Id', validators=[DataRequired()])
-    name = StringField('Name', validators=[DataRequired()])
-    # Added length validator to ensure password is at least 8 characters long (10/02/2025 AG)
+    first_name = StringField('First Name', validators=[DataRequired()])
+    last_name = StringField('Last Name', validators=[Optional()])
+    address = TextAreaField('Address', validators=[Optional()])
+    phone = IntegerField('Phone Number', validators=[Optional()])
+    username = StringField('Username', validators=[DataRequired()])
+    ssn = IntegerField('SSN', validators=[DataRequired()])
     passwd = PasswordField('Password', validators=[DataRequired(), Length(min=8, message='Password must be at least 8 characters.')])
     passwd_confirm = PasswordField('Confirm Password', validators=[DataRequired()])
     submit = SubmitField('Confirm')
 
 class LoginForm(FlaskForm):
-    id = StringField('Id', validators=[DataRequired()])
+    role = SelectField('User Type', choices=[('customer', 'Customer'), ('employee', 'Employee')], validators=[DataRequired()])
+    username = StringField('Username', validators=[DataRequired()])
     passwd = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Confirm')

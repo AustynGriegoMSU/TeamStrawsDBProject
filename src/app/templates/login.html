@@ -12,22 +12,23 @@
         <!-- Renders hidden fields, including CSRF token -->
         {{ form.hidden_tag() }}
         <p>
-            <!-- Renders 'ID' label on login form -->
-            {{ form.id.label }} <br> {{ form.id(size=15) }}
-            <!-- Error message shows if ID is not found -->
-            {% for error in form.id.errors %}
+            {{ form.role.label }} <br> {{ form.role() }}
+            {% for error in form.role.errors %}
                 <span style="color:red;">{{ error }}</span>
             {% endfor %}
         </p>
         <p>
-            <!-- Renders 'Password' label on login form -->
+            {{ form.username.label }} <br> {{ form.username(size=30) }}
+            {% for error in form.username.errors %}
+                <span style="color:red;">{{ error }}</span>
+            {% endfor %}
+        </p>
+        <p>
             {{ form.passwd.label }} <br> {{ form.passwd(size=30) }}
-            <!-- Error message shows if password is incorrect -->
             {% for error in form.passwd.errors %}
                 <span style="color:red;">{{ error }}</span>
             {% endfor %}
         </p>
-        <!-- Renders submit button on login form -->
         <p>{{ form.submit() }}</p>
     </form>
 {% endblock %}
