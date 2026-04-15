@@ -14,7 +14,7 @@ login_manager.login_view = 'login'
 
 @login_manager.user_loader
 def load_user(user_id):
-    from app.models import User
+    from src.app.models import User
     row = cur.execute(
         "SELECT id, name, about, passwd FROM users WHERE id = ?", (user_id,)
     ).fetchone()
@@ -22,4 +22,4 @@ def load_user(user_id):
         return User(id=row[0], name=row[1], about=row[2], passwd=row[3])
     return None
 
-from app import routes
+from src.app import routes
