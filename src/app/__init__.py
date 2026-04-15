@@ -6,8 +6,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-secret-key')
+app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 
+## Database setup
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 data_dir = os.path.join(project_root, 'data')
 os.makedirs(data_dir, exist_ok=True)

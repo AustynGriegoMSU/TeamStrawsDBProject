@@ -6,7 +6,6 @@
     <title>{{ title }}</title>
 </head>
 <body>
-<!--logout button (red color in top right corner of screen) -->
 {% if current_user.is_authenticated %}
     <a href="{{ url_for('signout') }}" style="float:right; padding: 8px 16px; background: #e74c3c; color: white; border: none; border-radius: 4px; text-decoration: none; font-weight: bold;">Sign Out</a>
 {% endif %}
