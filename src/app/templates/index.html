@@ -4,8 +4,8 @@
     <p>
     Please, choose an option below:
     </p>   
-    <button type="button" class="button" onclick=simple_action("{{ url_for('login') }}")>Login</button>
-    <button type="button" class="button" onclick=simple_action("{{ url_for('signup') }}")>Sign Up</button>
+    <button type="button" class="button" data-target="{{ url_for('login') }}" onclick="simple_action(this.dataset.target)">Login</button>
+    <button type="button" class="button" data-target="{{ url_for('signup') }}" onclick="simple_action(this.dataset.target)">Sign Up</button>
     <script type="text/javascript">
         function simple_action(target) {
             window.location = target

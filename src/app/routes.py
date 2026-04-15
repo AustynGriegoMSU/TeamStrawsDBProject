@@ -36,22 +36,38 @@ def signup() -> str:
         ).fetchone()
         if customer_row or employee_row:
             form.username.errors.append('Username already exists. Please choose a different username.')
+        elif form.role.data == 'customer' and not form.ssn.data:
+            form.ssn.errors.append('SSN is required for customer signup.')
+        elif form.role.data == 'employee' and form.branch_id.data is None:
+            form.branch_id.errors.append('Branch ID is required for employee signup.')
         elif form.passwd.data != form.passwd_confirm.data:
             form.passwd_confirm.errors.append('Passwords do not match.')
         else:
             hashed = bcrypt.hashpw(form.passwd.data.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-            cur.execute(
-                'INSERT INTO Customer ("First Name", "Last Name", "Address", "Phone #", "Username", "Password", "SSN") VALUES (?, ?, ?, ?, ?, ?, ?)',
-                (
-                    form.first_name.data,
-                    form.last_name.data or None,
-                    form.address.data or None,
-                    form.phone.data,
-                    form.username.data,
-                    hashed,
-                    form.ssn.data,
+            if form.role.data == 'customer':
+                cur.execute(
+                    'INSERT INTO Customer ("First Name", "Last Name", "Address", "Phone #", "Username", "Password", "SSN") VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    (
+                        form.first_name.data,
+                        form.last_name.data or None,
+                        form.address.data or None,
+                        form.phone.data,
+                        form.username.data,
+                        hashed,
+                        int(form.ssn.data),
+                    )
                 )
-            )
+            else:
+                cur.execute(
+                    'INSERT INTO Employee ("Branch ID", "First Name", "Last Name", "Username", "Password") VALUES (?, ?, ?, ?, ?)',
+                    (
+                        form.branch_id.data,
+                        form.first_name.data,
+                        form.last_name.data or '',
+                        form.username.data,
+                        hashed,
+                    )
+                )
             con.commit()
             con.sync()
             flash('Account created, please log in.')

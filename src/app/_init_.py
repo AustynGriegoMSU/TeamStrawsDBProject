@@ -8,7 +8,6 @@ import libsql_experimental as libsql
 con = libsql.connect("bank.db")
 cur = con.cursor()
 
-# flask-login setup
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 

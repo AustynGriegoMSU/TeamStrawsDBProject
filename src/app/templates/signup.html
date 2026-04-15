@@ -1,22 +1,21 @@
 {% extends 'base.html' %}
 {% block main %}
-    <!-- Displays heading for sign up form -->
     <h2>Sign Up</h2>
     <!-- Navigation buttons -->
     <p class="nav-buttons">
         <a href="{{ url_for('index') }}" class="button">Back to Home</a>
         <a href="{{ url_for('login') }}" class="button">Already have an account? Login</a>
     </p>
-    <!-- 
-    Displays flash messages
-    {% for message in get_flashed_messages() %}
-        <div style="color: green;">{{ message }}</div>
-    {% endfor %}
-    -->
-    
+
     <form action="" method="POST" novalidate>
         <!-- Renders hidden fields, including CSRF token -->
         {{ form.hidden_tag() }}
+        <p>
+            {{ form.role.label }} <br> {{ form.role() }}
+            {% for error in form.role.errors %}
+                <span style="color:red;">{{ error }}</span>
+            {% endfor %}
+        </p>
         <p>
             {{ form.first_name.label }} <br> {{ form.first_name(size=30) }}
             {% for error in form.first_name.errors %}
@@ -26,6 +25,12 @@
         <p>
             {{ form.last_name.label }} <br> {{ form.last_name(size=30) }}
             {% for error in form.last_name.errors %}
+                <span style="color:red;">{{ error }}</span>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.branch_id.label }} <br> {{ form.branch_id() }}
+            {% for error in form.branch_id.errors %}
                 <span style="color:red;">{{ error }}</span>
             {% endfor %}
         </p>
