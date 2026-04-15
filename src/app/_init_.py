@@ -7,3 +7,5 @@ import turso
 
 con = turso.connect("bank.db")
 cur = con.cursor()
+
+from app import routes

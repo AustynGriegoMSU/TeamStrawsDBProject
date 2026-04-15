@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block main %}
+    <!-- Displays heading for sign up form -->
+    <h2>Sign Up</h2>
+    <!-- Navigation buttons -->
+    <p class="nav-buttons">
+        <a href="{{ url_for('index') }}" class="button">Back to Home</a>
+        <a href="{{ url_for('login') }}" class="button">Already have an account? Login</a>
+    </p>
+    <!-- 
+    Displays flash messages
+    {% for message in get_flashed_messages() %}
+        <div style="color: green;">{{ message }}</div>
+    {% endfor %}
+    -->
+    
+    <form action="" method="POST" novalidate>
+        <!-- Renders hidden fields, including CSRF token -->
+        {{ form.hidden_tag() }}
+        <p>
+            <!-- Renders 'ID' label on signup form -->
+            {{ form.id.label }} <br> {{ form.id(size=15) }}
+            <!-- Error message shows if ID is already in use -->
+            {% for error in form.id.errors %}
+                <span style="color:red;">{{ error }}</span>
+            {% endfor %}
+        </p>
+        <p>
+            <!-- Renders 'Name' label on signup form -->
+            {{ form.name.label }} <br> {{ form.name(size=30) }}
+            <!-- Error message shows if name is left blank -->
+            {% for error in form.name.errors %}
+                <span style="color:red;">{{ error }}</span>
+            {% endfor %}
+        </p>
+        <p>        
+            <!-- Renders 'About' label on signup form -->
+            {{ form.about.label }} <br> {{ form.about(rows=5, cols=30) }}
+        </p>
+        <p>
+            <!-- Renders 'Password' label on signup form -->
+            {{ form.passwd.label }} <br> {{ form.passwd(size=30) }}
+            <!-- Error message shows if password doesn't meet requirements -->
+            {% for error in form.passwd.errors %}
+                <span style="color:red;">{{ error }}</span>
+            {% endfor %}
+        </p>
+        <p>        
+            <!-- Renders 'Confirm Password' label on signup form -->
+            {{ form.passwd_confirm.label }} <br> {{ form.passwd_confirm(size=30) }}
+             <!-- Error message shows if passwords do not match -->
+            {% for error in form.passwd_confirm.errors %}
+                <span style="color:red;">{{ error }}</span>
+            {% endfor %}
+        </p>
+        <!-- Renders submit button on signup form -->
+        <p>{{ form.submit() }}</p>
+    </form>
+{% endblock %}

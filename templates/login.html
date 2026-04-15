@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block main %}
+    <!-- Displays heading for login form -->
+    <h2>Login</h2>
+    <!-- Navigation buttons -->
+    <p class="nav-buttons">
+        <a href="{{ url_for('index') }}" class="button">Back to Home</a>
+        <a href="{{ url_for('signup') }}" class="button">Don't have an account? Sign up</a>
+    </p>
+
+    <form action="" method="POST" novalidate>
+        <!-- Renders hidden fields, including CSRF token -->
+        {{ form.hidden_tag() }}
+        <p>
+            <!-- Renders 'ID' label on login form -->
+            {{ form.id.label }} <br> {{ form.id(size=15) }}
+            <!-- Error message shows if ID is not found -->
+            {% for error in form.id.errors %}
+                <span style="color:red;">{{ error }}</span>
+            {% endfor %}
+        </p>
+        <p>
+            <!-- Renders 'Password' label on login form -->
+            {{ form.passwd.label }} <br> {{ form.passwd(size=30) }}
+            <!-- Error message shows if password is incorrect -->
+            {% for error in form.passwd.errors %}
+                <span style="color:red;">{{ error }}</span>
+            {% endfor %}
+        </p>
+        <!-- Renders submit button on login form -->
+        <p>{{ form.submit() }}</p>
+    </form>
+{% endblock %}
