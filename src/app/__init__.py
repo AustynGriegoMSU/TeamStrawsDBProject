@@ -8,9 +8,14 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-secret-key')
 
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+data_dir = os.path.join(project_root, 'data')
+os.makedirs(data_dir, exist_ok=True)
+local_db_path = os.path.join(data_dir, 'bank.db')
+
 import libsql_experimental as libsql
 con = libsql.connect(
-    "bank.db",
+    local_db_path,
     sync_url=os.environ.get('TURSO_URL'),
     auth_token=os.environ.get('TURSO_AUTH_TOKEN')
 )
