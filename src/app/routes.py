@@ -1,7 +1,7 @@
 from src.app import app, con, cur
 import bcrypt
 from flask import render_template, redirect, url_for, flash, Response
-from flask_login import login_user, logout_user, login_required
+from flask_login import login_user, logout_user, login_required, current_user
 from src.app.models import User
 from src.app.forms import SignUpForm, LoginForm
 
@@ -20,6 +20,15 @@ def password_matches(submitted_password: str, stored_password) -> bool:
 @app.route('/index.html')
 def index() -> str:
     return render_template('index.html')
+
+
+@app.route('/customer/home')
+@login_required
+def customer_home() -> str:
+    if getattr(current_user, 'role', None) != 'customer':
+        flash('Customer access only.')
+        return redirect(url_for('index'))
+    return render_template('customer_home.html')
 
 # User signup
 @app.route('/users/signup', methods=['GET', 'POST'])
@@ -100,6 +109,8 @@ def login() -> str:
             )
             login_user(user)
             flash('Logged in successfully.')
+            if form.role.data == 'customer':
+                return redirect(url_for('customer_home'))
             return redirect(url_for('index'))
         else:
             form.username.errors.append('Invalid username or password.')
