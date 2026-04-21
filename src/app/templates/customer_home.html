@@ -10,8 +10,8 @@
             <h3>Your Accounts</h3>
             <div class="account-list">
                 {% for account in accounts %}
-                    <a href="{{ url_for('customer_home', account_id=account[0]) }}" class="button{% if selected_account and selected_account[0] == account[0] %} button-secondary{% endif %}">
-                        Account #{{ account[0] }} · {{ account[1] }}
+                    <a href="{{ url_for('customer_home', account_id=account.id) }}" class="button{% if selected_account and selected_account.id == account.id %} button-secondary{% endif %}">
+                        Account #{{ account.id }} · {{ account.account_type }}
                     </a>
                 {% endfor %}
             </div>
@@ -20,10 +20,36 @@
         {% if selected_account %}
             <section class="card-section">
                 <h3>Selected Account</h3>
-                <p><strong>Account ID:</strong> {{ selected_account[0] }}</p>
-                <p><strong>Type:</strong> {{ selected_account[1] }}</p>
-                <p><strong>Branch:</strong> {{ selected_account[3] or 'Unknown Branch' }}</p>
-                <p><strong>Current Balance:</strong> ${{ '%.2f'|format(selected_account[2] or 0) }}</p>
+                <p><strong>Account ID:</strong> {{ selected_account.id }}</p>
+                <p><strong>Type:</strong> {{ selected_account.account_type }}</p>
+                <p><strong>Branch:</strong> {{ selected_account.branch_name or 'Unknown Branch' }}</p>
+                <p><strong>Current Balance:</strong> ${{ '%.2f'|format(selected_account.balance or 0) }}</p>
+            </section>
+
+            <section class="card-section">
+                <h3>Transfer Money</h3>
+                <p>For this project flow, enter the recipient account number.</p>
+                <form action="{{ url_for('customer_home', account_id=selected_account.id) }}" method="POST" novalidate>
+                    {{ transfer_form.hidden_tag() }}
+                    {{ transfer_form.source_account_id(type='hidden', value=selected_account.id) }}
+                    <div class="transfer-grid">
+                        <p>
+                            {{ transfer_form.recipient_account_id.label }}<br>
+                            {{ transfer_form.recipient_account_id() }}
+                            {% for error in transfer_form.recipient_account_id.errors %}
+                                <span style="color:red;">{{ error }}</span>
+                            {% endfor %}
+                        </p>
+                    </div>
+                    <p>
+                        {{ transfer_form.amount.label }}<br>
+                        {{ transfer_form.amount(step='0.01', min='0.01') }}
+                        {% for error in transfer_form.amount.errors %}
+                            <span style="color:red;">{{ error }}</span>
+                        {% endfor %}
+                    </p>
+                    <p>{{ transfer_form.submit_transfer() }}</p>
+                </form>
             </section>
 
             <section class="card-section">
@@ -42,10 +68,10 @@
                             <tbody>
                                 {% for tx in transactions %}
                                     <tr>
-                                        <td>{{ tx[0] }}</td>
-                                        <td>{{ tx[1] }}</td>
-                                        <td>${{ '%.2f'|format(tx[2] or 0) }}</td>
-                                        <td>{{ tx[3] }}</td>
+                                        <td>{{ tx.id }}</td>
+                                        <td>{{ tx.transaction_type }}</td>
+                                        <td>${{ '%.2f'|format(tx.amount or 0) }}</td>
+                                        <td>{{ tx.time }}</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
