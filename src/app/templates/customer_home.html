@@ -1,4 +1,60 @@
 {% extends 'base.html' %}
 {% block main %}
-    <h2>Customer Home Page</h2>
+    <h2>Customer Dashboard</h2>
+    <p>Welcome, {{ current_user.name or current_user.username }}. View account details and review recent transactions.</p>
+
+    {% if not accounts %}
+        <p>No accounts are currently linked to your profile.</p>
+    {% else %}
+        <section class="card-section">
+            <h3>Your Accounts</h3>
+            <div class="account-list">
+                {% for account in accounts %}
+                    <a href="{{ url_for('customer_home', account_id=account[0]) }}" class="button{% if selected_account and selected_account[0] == account[0] %} button-secondary{% endif %}">
+                        Account #{{ account[0] }} · {{ account[1] }}
+                    </a>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% if selected_account %}
+            <section class="card-section">
+                <h3>Selected Account</h3>
+                <p><strong>Account ID:</strong> {{ selected_account[0] }}</p>
+                <p><strong>Type:</strong> {{ selected_account[1] }}</p>
+                <p><strong>Branch:</strong> {{ selected_account[3] or 'Unknown Branch' }}</p>
+                <p><strong>Current Balance:</strong> ${{ '%.2f'|format(selected_account[2] or 0) }}</p>
+            </section>
+
+            <section class="card-section">
+                <h3>Recent Transactions</h3>
+                {% if transactions %}
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tx in transactions %}
+                                    <tr>
+                                        <td>{{ tx[0] }}</td>
+                                        <td>{{ tx[1] }}</td>
+                                        <td>${{ '%.2f'|format(tx[2] or 0) }}</td>
+                                        <td>{{ tx[3] }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p>No transactions found for this account yet.</p>
+                {% endif %}
+            </section>
+        {% endif %}
+    {% endif %}
 {% endblock %}

@@ -1,6 +1,6 @@
 from src.app import app, con, cur
 import bcrypt
-from flask import render_template, redirect, url_for, flash, Response
+from flask import render_template, redirect, url_for, flash, Response, request
 from flask_login import login_user, logout_user, login_required, current_user
 from src.app.models import User
 from src.app.forms import SignUpForm, LoginForm
@@ -27,7 +27,54 @@ def customer_home() -> str:
     if getattr(current_user, 'role', None) != 'customer':
         flash('Customer access only.')
         return redirect(url_for('index'))
-    return render_template('customer_home.html')
+
+    customer_id = current_user.record_id
+    accounts = cur.execute(
+        '''
+        SELECT a."Account ID", a."Account Type", a."Balance", b."Name"
+        FROM Account a
+        LEFT JOIN Branch b ON b."Branch ID" = a."Branch ID"
+        WHERE a."Customer ID" = ?
+        ORDER BY a."Account ID" ASC
+        ''',
+        (customer_id,)
+    ).fetchall()
+
+    selected_account_id = request.args.get('account_id', type=int)
+    selected_account = None
+    transactions = []
+
+    if accounts:
+        if selected_account_id is None:
+            selected_account_id = accounts[0][0]
+
+        for account in accounts:
+            if account[0] == selected_account_id:
+                selected_account = account
+                break
+
+        if selected_account is None:
+            flash('That account is not available for your profile.')
+            selected_account_id = accounts[0][0]
+            selected_account = accounts[0]
+
+        transactions = cur.execute(
+            '''
+            SELECT "Transaction ID", "Transaction Type", "Amount", "Time"
+            FROM "Transaction"
+            WHERE "Account ID" = ?
+            ORDER BY "Transaction ID" DESC
+            LIMIT 25
+            ''',
+            (selected_account_id,)
+        ).fetchall()
+
+    return render_template(
+        'customer_home.html',
+        accounts=accounts,
+        selected_account=selected_account,
+        transactions=transactions,
+    )
 
 # User signup
 @app.route('/users/signup', methods=['GET', 'POST'])
