@@ -4,7 +4,7 @@ from datetime import datetime
 from flask import render_template, redirect, url_for, flash, Response, request
 from flask_login import login_user, logout_user, login_required, current_user
 from src.app.models import User
-from src.app.forms import SignUpForm, LoginForm, TransferForm
+from src.app.forms import SignUpForm, LoginForm, TransferForm, NewAccountRequestForm, ReviewAccountRequestForm
 
 
 def password_matches(submitted_password: str, stored_password) -> bool:
@@ -15,6 +15,28 @@ def password_matches(submitted_password: str, stored_password) -> bool:
     if stored_text.startswith('$2'):
         return bcrypt.checkpw(submitted_password.encode('utf-8'), stored_text.encode('utf-8'))
     return submitted_password == stored_text
+
+
+def ensure_account_request_table() -> None:
+    cur.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS AccountRequest (
+            "Request ID" INTEGER PRIMARY KEY AUTOINCREMENT,
+            "Customer ID" INTEGER NOT NULL,
+            "Requested Type" TEXT NOT NULL,
+            "Status" TEXT NOT NULL DEFAULT 'pending',
+            "Requested At" TEXT NOT NULL,
+            "Reviewed At" TEXT,
+            "Reviewed By Employee ID" INTEGER,
+            "Notes" TEXT
+        )
+        '''
+    )
+    con.commit()
+    con.sync()
+
+
+ensure_account_request_table()
 
 @app.route('/')
 @app.route('/index')
@@ -31,6 +53,7 @@ def customer_home() -> str:
 
     customer_id = current_user.record_id
     transfer_form: TransferForm = TransferForm()
+    new_account_form: NewAccountRequestForm = NewAccountRequestForm()
 
     account_rows = cur.execute(
         '''
@@ -55,11 +78,34 @@ def customer_home() -> str:
     ]
 
     selected_account_id = request.args.get('account_id', type=int)
-    if request.method == 'POST':
+    if request.method == 'POST' and 'submit_transfer' in request.form:
         selected_account_id = transfer_form.source_account_id.data
 
     selected_account = None
     transactions = []
+
+    account_requests = cur.execute(
+        '''
+        SELECT "Request ID", "Requested Type", "Status", "Requested At", "Reviewed At", "Notes"
+        FROM AccountRequest
+        WHERE "Customer ID" = ?
+        ORDER BY "Request ID" DESC
+        LIMIT 25
+        ''',
+        (customer_id,)
+    ).fetchall()
+
+    account_requests = [
+        {
+            'id': row[0],
+            'requested_type': row[1],
+            'status': row[2],
+            'requested_at': row[3],
+            'reviewed_at': row[4],
+            'notes': row[5],
+        }
+        for row in account_requests
+    ]
 
     if accounts:
         if selected_account_id is None:
@@ -75,7 +121,36 @@ def customer_home() -> str:
             selected_account_id = accounts[0]['id']
             selected_account = accounts[0]
 
-        if transfer_form.validate_on_submit():
+        if request.method == 'POST' and 'submit_request' in request.form:
+            if new_account_form.validate():
+                existing_pending = cur.execute(
+                    '''
+                    SELECT "Request ID"
+                    FROM AccountRequest
+                    WHERE "Customer ID" = ? AND lower("Requested Type") = lower(?) AND "Status" = 'pending'
+                    LIMIT 1
+                    ''',
+                    (customer_id, new_account_form.requested_type.data)
+                ).fetchone()
+
+                if existing_pending:
+                    flash('You already have a pending request for that account type.')
+                else:
+                    cur.execute(
+                        'INSERT INTO AccountRequest ("Customer ID", "Requested Type", "Status", "Requested At") VALUES (?, ?, ?, ?)',
+                        (
+                            customer_id,
+                            new_account_form.requested_type.data,
+                            'pending',
+                            datetime.utcnow().isoformat(timespec='seconds'),
+                        )
+                    )
+                    con.commit()
+                    con.sync()
+                    flash('Account request submitted. An employee must approve it.')
+                    return redirect(url_for('customer_home', account_id=selected_account['id']))
+
+        if request.method == 'POST' and 'submit_transfer' in request.form and transfer_form.validate():
             recipient_account = cur.execute(
                 '''
                 SELECT "Account ID", "BalanceCents"
@@ -154,7 +229,109 @@ def customer_home() -> str:
         selected_account=selected_account,
         transactions=transactions,
         transfer_form=transfer_form,
+        new_account_form=new_account_form,
+        account_requests=account_requests,
     )
+
+
+@app.route('/employee/home', methods=['GET', 'POST'])
+@login_required
+def employee_home() -> str:
+    if getattr(current_user, 'role', None) != 'employee':
+        flash('Employee access only.')
+        return redirect(url_for('index'))
+
+    review_form: ReviewAccountRequestForm = ReviewAccountRequestForm()
+
+    if request.method == 'POST' and review_form.validate():
+        request_id = int(review_form.request_id.data)
+        action = review_form.action.data.lower().strip()
+
+        request_row = cur.execute(
+            'SELECT "Request ID", "Customer ID", "Requested Type", "Status" FROM AccountRequest WHERE "Request ID" = ?',
+            (request_id,)
+        ).fetchone()
+
+        if not request_row:
+            flash('Request not found.')
+        elif str(request_row[3]).lower() != 'pending':
+            flash('That request was already reviewed.')
+        else:
+            employee_branch_row = cur.execute(
+                'SELECT "Branch ID" FROM Employee WHERE "Employee ID" = ?',
+                (current_user.record_id,)
+            ).fetchone()
+
+            if not employee_branch_row:
+                flash('Employee branch not found; cannot review request.')
+            elif action == 'approve':
+                cur.execute(
+                    'INSERT INTO Account ("Customer ID", "Branch ID", "BalanceCents", "Account Type") VALUES (?, ?, ?, ?)',
+                    (
+                        request_row[1],
+                        employee_branch_row[0],
+                        0,
+                        request_row[2],
+                    )
+                )
+                new_account_id = cur.execute('SELECT last_insert_rowid()').fetchone()[0]
+                cur.execute(
+                    'UPDATE AccountRequest SET "Status" = ?, "Reviewed At" = ?, "Reviewed By Employee ID" = ?, "Notes" = ? WHERE "Request ID" = ?',
+                    (
+                        'approved',
+                        datetime.utcnow().isoformat(timespec='seconds'),
+                        current_user.record_id,
+                        f'Created account #{new_account_id}',
+                        request_id,
+                    )
+                )
+                con.commit()
+                con.sync()
+                flash(f'Request approved. New account #{new_account_id} created.')
+            elif action == 'reject':
+                cur.execute(
+                    'UPDATE AccountRequest SET "Status" = ?, "Reviewed At" = ?, "Reviewed By Employee ID" = ?, "Notes" = ? WHERE "Request ID" = ?',
+                    (
+                        'rejected',
+                        datetime.utcnow().isoformat(timespec='seconds'),
+                        current_user.record_id,
+                        'Rejected by employee',
+                        request_id,
+                    )
+                )
+                con.commit()
+                con.sync()
+                flash('Request rejected.')
+            else:
+                flash('Invalid action.')
+
+        return redirect(url_for('employee_home'))
+
+    requests = cur.execute(
+        '''
+        SELECT ar."Request ID", ar."Customer ID", c."Username", ar."Requested Type", ar."Status", ar."Requested At", ar."Reviewed At", ar."Notes"
+        FROM AccountRequest ar
+        JOIN Customer c ON c."Customer ID" = ar."Customer ID"
+        ORDER BY ar."Request ID" DESC
+        LIMIT 50
+        '''
+    ).fetchall()
+
+    requests = [
+        {
+            'id': row[0],
+            'customer_id': row[1],
+            'username': row[2],
+            'requested_type': row[3],
+            'status': row[4],
+            'requested_at': row[5],
+            'reviewed_at': row[6],
+            'notes': row[7],
+        }
+        for row in requests
+    ]
+
+    return render_template('employee_home.html', requests=requests, review_form=review_form)
 
 # User signup
 @app.route('/users/signup', methods=['GET', 'POST'])
@@ -247,7 +424,7 @@ def login() -> str:
             flash('Logged in successfully.')
             if role == 'customer':
                 return redirect(url_for('customer_home'))
-            return redirect(url_for('index'))
+            return redirect(url_for('employee_home'))
         else:
             form.username.errors.append('Invalid username or password.')
     return render_template('login.html', form=form)

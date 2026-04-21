@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block main %}
+    <h2>Employee Dashboard</h2>
+    <p>Review customer account requests and approve or reject them.</p>
+
+    <section class="card-section">
+        <h3>Account Requests</h3>
+        {% if requests %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Request ID</th>
+                            <th>Customer</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Requested At</th>
+                            <th>Reviewed At</th>
+                            <th>Notes</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in requests %}
+                            <tr>
+                                <td>{{ item.id }}</td>
+                                <td>{{ item.username }} (#{{ item.customer_id }})</td>
+                                <td>{{ item.requested_type }}</td>
+                                <td>{{ item.status }}</td>
+                                <td>{{ item.requested_at }}</td>
+                                <td>{{ item.reviewed_at or '-' }}</td>
+                                <td>{{ item.notes or '-' }}</td>
+                                <td>
+                                    {% if item.status == 'pending' %}
+                                        <div class="row-actions">
+                                            <form action="{{ url_for('employee_home') }}" method="POST">
+                                                {{ review_form.hidden_tag() }}
+                                                <input type="hidden" name="request_id" value="{{ item.id }}">
+                                                <input type="hidden" name="action" value="approve">
+                                                <button type="submit">Approve</button>
+                                            </form>
+                                            <form action="{{ url_for('employee_home') }}" method="POST">
+                                                {{ review_form.hidden_tag() }}
+                                                <input type="hidden" name="request_id" value="{{ item.id }}">
+                                                <input type="hidden" name="action" value="reject">
+                                                <button type="submit" class="danger-btn">Reject</button>
+                                            </form>
+                                        </div>
+                                    {% else %}
+                                        <span>-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p>No account requests yet.</p>
+        {% endif %}
+    </section>
+{% endblock %}

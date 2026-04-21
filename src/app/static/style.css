@@ -197,6 +197,23 @@ tbody tr:hover {
     background: #f8fbff;
 }
 
+.row-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.row-actions form {
+    margin: 0;
+}
+
+.danger-btn {
+    background: var(--danger);
+}
+
+.danger-btn:hover {
+    background: var(--danger-hover);
+}
+
 @media (max-width: 640px) {
     body {
         padding: 20px 14px;

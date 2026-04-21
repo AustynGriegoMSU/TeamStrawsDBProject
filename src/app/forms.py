@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, TextAreaField, SubmitField, IntegerField, SelectField, FloatField
+from wtforms import StringField, PasswordField, TextAreaField, SubmitField, IntegerField, SelectField, FloatField, HiddenField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange
 
 class SignUpForm(FlaskForm):
@@ -20,9 +20,21 @@ class LoginForm(FlaskForm):
     passwd = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Confirm')
 
-
 class TransferForm(FlaskForm):
     source_account_id = IntegerField(validators=[DataRequired()])
     recipient_account_id = IntegerField('Recipient Account Number', validators=[DataRequired()])
     amount = FloatField('Transfer Amount', validators=[DataRequired(), NumberRange(min=0.01, message='Amount must be greater than 0.')])
     submit_transfer = SubmitField('Send Transfer')
+
+class NewAccountRequestForm(FlaskForm):
+    requested_type = SelectField(
+        'Requested Account Type',
+        choices=[('Checking', 'Checking'), ('Savings', 'Savings')],
+        validators=[DataRequired()],
+    )
+    submit_request = SubmitField('Request New Account')
+
+class ReviewAccountRequestForm(FlaskForm):
+    request_id = HiddenField(validators=[DataRequired()])
+    action = HiddenField(validators=[DataRequired()])
+    submit_review = SubmitField('Submit Review')

@@ -83,4 +83,54 @@
             </section>
         {% endif %}
     {% endif %}
+
+    <section class="card-section">
+        <h3>Request New Account</h3>
+        <p>Choose an account type and submit. An employee must approve the request before the account is created.</p>
+        <form action="{{ url_for('customer_home', account_id=selected_account.id if selected_account else None) }}" method="POST" novalidate>
+            {{ new_account_form.hidden_tag() }}
+            <p>
+                {{ new_account_form.requested_type.label }}<br>
+                {{ new_account_form.requested_type() }}
+                {% for error in new_account_form.requested_type.errors %}
+                    <span style="color:red;">{{ error }}</span>
+                {% endfor %}
+            </p>
+            <p>{{ new_account_form.submit_request() }}</p>
+        </form>
+    </section>
+
+    <section class="card-section">
+        <h3>Your Account Requests</h3>
+        {% if account_requests %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Request ID</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Requested At</th>
+                            <th>Reviewed At</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in account_requests %}
+                            <tr>
+                                <td>{{ item.id }}</td>
+                                <td>{{ item.requested_type }}</td>
+                                <td>{{ item.status }}</td>
+                                <td>{{ item.requested_at }}</td>
+                                <td>{{ item.reviewed_at or '-' }}</td>
+                                <td>{{ item.notes or '-' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p>No account requests yet.</p>
+        {% endif %}
+    </section>
 {% endblock %}
