@@ -11,6 +11,15 @@
 {% endif %}
 
 <main class="page-shell">
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <section class="flash-stack" aria-live="polite">
+            {% for message in messages %}
+                <div class="flash-message">{{ message }}</div>
+            {% endfor %}
+        </section>
+    {% endif %}
+{% endwith %}
 {% block main %}{% endblock %}
 </main>
 </body>

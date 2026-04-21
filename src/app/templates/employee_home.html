@@ -34,13 +34,13 @@
                                     {% if item.status == 'pending' %}
                                         <div class="row-actions">
                                             <form action="{{ url_for('employee_home') }}" method="POST">
-                                                {{ review_form.hidden_tag() }}
+                                                {{ review_form.csrf_token() }}
                                                 <input type="hidden" name="request_id" value="{{ item.id }}">
                                                 <input type="hidden" name="action" value="approve">
                                                 <button type="submit">Approve</button>
                                             </form>
                                             <form action="{{ url_for('employee_home') }}" method="POST">
-                                                {{ review_form.hidden_tag() }}
+                                                {{ review_form.csrf_token() }}
                                                 <input type="hidden" name="request_id" value="{{ item.id }}">
                                                 <input type="hidden" name="action" value="reject">
                                                 <button type="submit" class="danger-btn">Reject</button>

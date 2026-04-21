@@ -107,6 +107,35 @@ def customer_home() -> str:
         for row in account_requests
     ]
 
+    if request.method == 'POST' and 'submit_request' in request.form:
+        if new_account_form.validate():
+            existing_pending = cur.execute(
+                '''
+                SELECT "Request ID"
+                FROM AccountRequest
+                WHERE "Customer ID" = ? AND lower("Requested Type") = lower(?) AND "Status" = 'pending'
+                LIMIT 1
+                ''',
+                (customer_id, new_account_form.requested_type.data)
+            ).fetchone()
+
+            if existing_pending:
+                flash('You already have a pending request for that account type.')
+            else:
+                cur.execute(
+                    'INSERT INTO AccountRequest ("Customer ID", "Requested Type", "Status", "Requested At") VALUES (?, ?, ?, ?)',
+                    (
+                        customer_id,
+                        new_account_form.requested_type.data,
+                        'pending',
+                        datetime.utcnow().isoformat(timespec='seconds'),
+                    )
+                )
+                con.commit()
+                con.sync()
+                flash('Account request submitted. An employee must approve it.')
+                return redirect(url_for('customer_home'))
+
     if accounts:
         if selected_account_id is None:
             selected_account_id = accounts[0]['id']
@@ -120,35 +149,6 @@ def customer_home() -> str:
             flash('That account is not available for your profile.')
             selected_account_id = accounts[0]['id']
             selected_account = accounts[0]
-
-        if request.method == 'POST' and 'submit_request' in request.form:
-            if new_account_form.validate():
-                existing_pending = cur.execute(
-                    '''
-                    SELECT "Request ID"
-                    FROM AccountRequest
-                    WHERE "Customer ID" = ? AND lower("Requested Type") = lower(?) AND "Status" = 'pending'
-                    LIMIT 1
-                    ''',
-                    (customer_id, new_account_form.requested_type.data)
-                ).fetchone()
-
-                if existing_pending:
-                    flash('You already have a pending request for that account type.')
-                else:
-                    cur.execute(
-                        'INSERT INTO AccountRequest ("Customer ID", "Requested Type", "Status", "Requested At") VALUES (?, ?, ?, ?)',
-                        (
-                            customer_id,
-                            new_account_form.requested_type.data,
-                            'pending',
-                            datetime.utcnow().isoformat(timespec='seconds'),
-                        )
-                    )
-                    con.commit()
-                    con.sync()
-                    flash('Account request submitted. An employee must approve it.')
-                    return redirect(url_for('customer_home', account_id=selected_account['id']))
 
         if request.method == 'POST' and 'submit_transfer' in request.form and transfer_form.validate():
             recipient_account = cur.execute(
@@ -243,7 +243,11 @@ def employee_home() -> str:
 
     review_form: ReviewAccountRequestForm = ReviewAccountRequestForm()
 
-    if request.method == 'POST' and review_form.validate():
+    if request.method == 'POST':
+        if not review_form.validate():
+            flash('Could not process review action. Please try again.')
+            return redirect(url_for('employee_home'))
+
         request_id = int(review_form.request_id.data)
         action = review_form.action.data.lower().strip()
 
@@ -352,6 +356,11 @@ def signup() -> str:
             form.ssn.errors.append('SSN is required for customer signup.')
         elif form.role.data == 'employee' and form.branch_id.data is None:
             form.branch_id.errors.append('Branch ID is required for employee signup.')
+        elif form.role.data == 'employee' and not cur.execute(
+            'SELECT "Branch ID" FROM Branch WHERE "Branch ID" = ?',
+            (form.branch_id.data,)
+        ).fetchone():
+            form.branch_id.errors.append('Branch ID does not exist. Enter a valid branch ID.')
         elif form.passwd.data != form.passwd_confirm.data:
             form.passwd_confirm.errors.append('Passwords do not match.')
         else:
