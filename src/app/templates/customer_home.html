@@ -8,22 +8,79 @@
     {% else %}
         <section class="card-section">
             <h3>Your Accounts</h3>
-            <div class="account-list">
-                {% for account in accounts %}
-                    <a href="{{ url_for('customer_home', account_id=account.id) }}" class="button{% if selected_account and selected_account.id == account.id %} button-secondary{% endif %}">
-                        Account #{{ account.id }} · {{ account.account_type }}
-                    </a>
-                {% endfor %}
-            </div>
+            {% if checking_accounts %}
+                <h4>Checking Accounts</h4>
+                <div class="account-list">
+                    {% for account in checking_accounts %}
+                        <a href="{{ url_for('customer_home', account_id=account.id) }}" class="account-card{% if selected_account and selected_account.id == account.id %} account-card-active{% endif %}">
+                            <strong>{{ account.nickname or account.account_type }}</strong>
+                            <span class="account-card-label">Account #{{ account.id }}</span>
+                            <span>Balance: ${{ '%.2f'|format(account.balance or 0) }}</span>
+                            <span>{{ account.branch_name or 'Unknown Branch' }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if savings_accounts %}
+                <h4>Savings Accounts</h4>
+                <div class="account-list">
+                    {% for account in savings_accounts %}
+                        <a href="{{ url_for('customer_home', account_id=account.id) }}" class="account-card{% if selected_account and selected_account.id == account.id %} account-card-active{% endif %}">
+                            <strong>{{ account.nickname or account.account_type }}</strong>
+                            <span class="account-card-label">Account #{{ account.id }}</span>
+                            <span>Balance: ${{ '%.2f'|format(account.balance or 0) }}</span>
+                            <span>{{ account.branch_name or 'Unknown Branch' }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if other_accounts %}
+                <h4>Other Accounts</h4>
+                <div class="account-list">
+                    {% for account in other_accounts %}
+                        <a href="{{ url_for('customer_home', account_id=account.id) }}" class="account-card{% if selected_account and selected_account.id == account.id %} account-card-active{% endif %}">
+                            <strong>{{ account.nickname or account.account_type }}</strong>
+                            <span class="account-card-label">Account #{{ account.id }}</span>
+                            <span>Balance: ${{ '%.2f'|format(account.balance or 0) }}</span>
+                            <span>{{ account.branch_name or 'Unknown Branch' }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </section>
 
         {% if selected_account %}
             <section class="card-section">
-                <h3>Selected Account</h3>
-                <p><strong>Account ID:</strong> {{ selected_account.id }}</p>
+                {% set editing_nickname = request.args.get('edit_nickname') == '1' %}
+                <h3>{{ selected_account.nickname or selected_account.account_type }}</h3>
+                <p><strong>Account Number:</strong> {{ selected_account.id }}</p>
                 <p><strong>Type:</strong> {{ selected_account.account_type }}</p>
                 <p><strong>Branch:</strong> {{ selected_account.branch_name or 'Unknown Branch' }}</p>
                 <p><strong>Current Balance:</strong> ${{ '%.2f'|format(selected_account.balance or 0) }}</p>
+                {% if selected_account.nickname and not editing_nickname %}
+                    <p>
+                        <a href="{{ url_for('customer_home', account_id=selected_account.id, edit_nickname=1) }}" class="button">Edit Nickname</a>
+                    </p>
+                {% else %}
+                    <form action="{{ url_for('customer_home', account_id=selected_account.id) }}" method="POST" novalidate>
+                        {{ nickname_form.hidden_tag() }}
+                        <p>
+                            {{ nickname_form.nickname.label }}<br>
+                            {{ nickname_form.nickname(value=selected_account.nickname or '', placeholder='Example: Bills Checking') }}
+                            {% for error in nickname_form.nickname.errors %}
+                                <span style="color:red;">{{ error }}</span>
+                            {% endfor %}
+                        </p>
+                        <p>{{ nickname_form.submit_nickname() }}</p>
+                        {% if selected_account.nickname %}
+                            <p>
+                                <a href="{{ url_for('customer_home', account_id=selected_account.id) }}" class="button">Cancel</a>
+                            </p>
+                        {% endif %}
+                    </form>
+                {% endif %}
             </section>
 
             <section class="card-section">
@@ -36,6 +93,7 @@
                                     <th>ID</th>
                                     <th>Type</th>
                                     <th>Amount</th>
+                                    <th>Details</th>
                                     <th>Time</th>
                                 </tr>
                             </thead>
@@ -45,6 +103,7 @@
                                         <td>{{ tx.id }}</td>
                                         <td>{{ tx.transaction_type }}</td>
                                         <td>${{ '%.2f'|format(tx.amount or 0) }}</td>
+                                        <td>{{ tx.details or '-' }}</td>
                                         <td>{{ tx.time }}</td>
                                     </tr>
                                 {% endfor %}

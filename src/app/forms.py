@@ -26,6 +26,11 @@ class TransferForm(FlaskForm):
     amount = FloatField('Transfer Amount', validators=[DataRequired(), NumberRange(min=0.01, message='Amount must be greater than 0.')])
     submit_transfer = SubmitField('Send Transfer')
 
+class AccountNicknameForm(FlaskForm):
+    account_id = HiddenField(validators=[DataRequired()])
+    nickname = StringField('Account Nickname', validators=[Optional(), Length(max=40, message='Nickname must be 40 characters or fewer.')])
+    submit_nickname = SubmitField('Save Nickname')
+
 class NewAccountRequestForm(FlaskForm):
     requested_type = SelectField(
         'Requested Account Type',

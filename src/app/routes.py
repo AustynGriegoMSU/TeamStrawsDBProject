@@ -4,7 +4,7 @@ from datetime import datetime
 from flask import render_template, redirect, url_for, flash, Response, request
 from flask_login import login_user, logout_user, login_required, current_user
 from src.app.models import User
-from src.app.forms import SignUpForm, LoginForm, TransferForm, NewAccountRequestForm, ReviewAccountRequestForm
+from src.app.forms import SignUpForm, LoginForm, TransferForm, AccountNicknameForm, NewAccountRequestForm, ReviewAccountRequestForm
 
 
 def password_matches(submitted_password: str, stored_password) -> bool:
@@ -36,7 +36,33 @@ def ensure_account_request_table() -> None:
     con.sync()
 
 
+def ensure_transaction_details_column() -> None:
+    transaction_columns = {
+        row[1]
+        for row in cur.execute('PRAGMA table_info("Transaction")').fetchall()
+    }
+
+    if 'Details' not in transaction_columns:
+        cur.execute('ALTER TABLE "Transaction" ADD COLUMN "Details" TEXT')
+        con.commit()
+        con.sync()
+
+
+def ensure_account_nickname_column() -> None:
+    account_columns = {
+        row[1]
+        for row in cur.execute('PRAGMA table_info("Account")').fetchall()
+    }
+
+    if 'Nickname' not in account_columns:
+        cur.execute('ALTER TABLE "Account" ADD COLUMN "Nickname" TEXT')
+        con.commit()
+        con.sync()
+
+
 ensure_account_request_table()
+ensure_transaction_details_column()
+ensure_account_nickname_column()
 
 @app.route('/')
 @app.route('/index')
@@ -53,15 +79,22 @@ def customer_home() -> str:
 
     customer_id = current_user.record_id
     transfer_form: TransferForm = TransferForm()
+    nickname_form: AccountNicknameForm = AccountNicknameForm()
     new_account_form: NewAccountRequestForm = NewAccountRequestForm()
 
     account_rows = cur.execute(
         '''
-        SELECT a."Account ID", a."Account Type", a."BalanceCents", b."Name"
+        SELECT a."Account ID", a."Account Type", a."BalanceCents", b."Name", a."Nickname"
         FROM Account a
         LEFT JOIN Branch b ON b."Branch ID" = a."Branch ID"
         WHERE a."Customer ID" = ?
-        ORDER BY a."Account ID" ASC
+        ORDER BY
+            CASE lower(a."Account Type")
+                WHEN 'checking' THEN 0
+                WHEN 'savings' THEN 1
+                ELSE 2
+            END,
+            a."Account ID" ASC
         ''',
         (customer_id,)
     ).fetchall()
@@ -73,13 +106,30 @@ def customer_home() -> str:
             'balance_cents': int(row[2] or 0),
             'balance': (int(row[2] or 0) / 100),
             'branch_name': row[3],
+            'nickname': row[4],
         }
         for row in account_rows
     ]
+    checking_accounts = [account for account in accounts if str(account['account_type']).lower() == 'checking']
+    savings_accounts = [account for account in accounts if str(account['account_type']).lower() == 'savings']
+    other_accounts = [
+        account for account in accounts if str(account['account_type']).lower() not in {'checking', 'savings'}
+    ]
 
     selected_account_id = request.args.get('account_id', type=int)
+
+    def posted_account_id() -> int | None:
+        values = request.form.getlist('account_id')
+        for raw in reversed(values):
+            text = (raw or '').strip()
+            if text.isdigit():
+                return int(text)
+        return None
+
     if request.method == 'POST' and 'submit_transfer' in request.form:
         selected_account_id = transfer_form.source_account_id.data
+    elif request.method == 'POST' and 'submit_nickname' in request.form:
+        selected_account_id = posted_account_id() or selected_account_id
 
     selected_account = None
     transactions = []
@@ -136,6 +186,34 @@ def customer_home() -> str:
                 flash('Account request submitted. An employee must approve it.')
                 return redirect(url_for('customer_home'))
 
+    if request.method == 'POST' and 'submit_nickname' in request.form:
+        submitted_account_id = posted_account_id()
+
+        if not submitted_account_id:
+            flash('Could not update nickname for that account.')
+            return redirect(url_for('customer_home'))
+        if not nickname_form.validate():
+            selected_account_id = submitted_account_id
+        else:
+            account_owner = cur.execute(
+                'SELECT 1 FROM Account WHERE "Account ID" = ? AND "Customer ID" = ? LIMIT 1',
+                (submitted_account_id, customer_id)
+            ).fetchone()
+
+            if not account_owner:
+                flash('That account is not available for editing.')
+                return redirect(url_for('customer_home'))
+
+            nickname_value = (nickname_form.nickname.data or '').strip()
+            cur.execute(
+                'UPDATE Account SET "Nickname" = ? WHERE "Account ID" = ? AND "Customer ID" = ?',
+                (nickname_value or None, submitted_account_id, customer_id)
+            )
+            con.commit()
+            con.sync()
+            flash('Account nickname updated.')
+            return redirect(url_for('customer_home', account_id=submitted_account_id))
+
     if accounts:
         if selected_account_id is None:
             selected_account_id = accounts[0]['id']
@@ -149,6 +227,8 @@ def customer_home() -> str:
             flash('That account is not available for your profile.')
             selected_account_id = accounts[0]['id']
             selected_account = accounts[0]
+
+        nickname_form.account_id.data = selected_account['id']
 
         if request.method == 'POST' and 'submit_transfer' in request.form and transfer_form.validate():
             recipient_account = cur.execute(
@@ -177,6 +257,8 @@ def customer_home() -> str:
                 recipient_before_cents = int(recipient_account[1] or 0)
                 recipient_after_cents = recipient_before_cents + transfer_amount_cents
                 now = datetime.utcnow().isoformat(timespec='seconds')
+                source_details = f'Transfer to account #{recipient_account[0]}'
+                recipient_details = f'Transfer from account #{selected_account["id"]}'
 
                 cur.execute(
                     'UPDATE Account SET "BalanceCents" = ? WHERE "Account ID" = ?',
@@ -188,12 +270,12 @@ def customer_home() -> str:
                 )
 
                 cur.execute(
-                    'INSERT INTO "Transaction" ("Account ID", "Transaction Type", "AmountCents", "Time") VALUES (?, ?, ?, ?)',
-                    (selected_account['id'], 'withdraw', transfer_amount_cents, now)
+                    'INSERT INTO "Transaction" ("Account ID", "Transaction Type", "AmountCents", "Time", "Details") VALUES (?, ?, ?, ?, ?)',
+                    (selected_account['id'], 'transfer', transfer_amount_cents, now, source_details)
                 )
                 cur.execute(
-                    'INSERT INTO "Transaction" ("Account ID", "Transaction Type", "AmountCents", "Time") VALUES (?, ?, ?, ?)',
-                    (recipient_account[0], 'deposit', transfer_amount_cents, now)
+                    'INSERT INTO "Transaction" ("Account ID", "Transaction Type", "AmountCents", "Time", "Details") VALUES (?, ?, ?, ?, ?)',
+                    (recipient_account[0], 'deposit', transfer_amount_cents, now, recipient_details)
                 )
 
                 con.commit()
@@ -203,7 +285,7 @@ def customer_home() -> str:
 
         transactions = cur.execute(
             '''
-            SELECT "Transaction ID", "Transaction Type", "AmountCents", "Time"
+            SELECT "Transaction ID", "Transaction Type", "AmountCents", "Time", "Details"
             FROM "Transaction"
             WHERE "Account ID" = ?
             ORDER BY "Transaction ID" DESC
@@ -219,6 +301,7 @@ def customer_home() -> str:
                 'amount_cents': int(row[2] or 0),
                 'amount': (int(row[2] or 0) / 100),
                 'time': row[3],
+                'details': row[4],
             }
             for row in transactions
         ]
@@ -226,9 +309,13 @@ def customer_home() -> str:
     return render_template(
         'customer_home.html',
         accounts=accounts,
+        checking_accounts=checking_accounts,
+        savings_accounts=savings_accounts,
+        other_accounts=other_accounts,
         selected_account=selected_account,
         transactions=transactions,
         transfer_form=transfer_form,
+        nickname_form=nickname_form,
         new_account_form=new_account_form,
         account_requests=account_requests,
     )
