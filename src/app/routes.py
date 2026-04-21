@@ -127,11 +127,12 @@ def customer_home() -> str:
         return None
 
     if request.method == 'POST' and 'submit_transfer' in request.form:
-        selected_account_id = transfer_form.source_account_id.data
+        selected_account_id = request.form.get('source_account_id', type=int) or selected_account_id
     elif request.method == 'POST' and 'submit_nickname' in request.form:
         selected_account_id = posted_account_id() or selected_account_id
 
     selected_account = None
+    transfer_source_account = None
     transactions = []
 
     account_requests = cur.execute(
@@ -215,22 +216,29 @@ def customer_home() -> str:
             return redirect(url_for('customer_home', account_id=submitted_account_id))
 
     if accounts:
-        if selected_account_id is None:
-            selected_account_id = accounts[0]['id']
+        account_lookup = {account['id']: account for account in accounts}
 
-        for account in accounts:
-            if account['id'] == selected_account_id:
-                selected_account = account
-                break
+        if selected_account_id is not None:
+            for account in accounts:
+                if account['id'] == selected_account_id:
+                    selected_account = account
+                    break
 
-        if selected_account is None:
-            flash('That account is not available for your profile.')
-            selected_account_id = accounts[0]['id']
-            selected_account = accounts[0]
+            if selected_account is None:
+                flash('That account is not available for your profile.')
 
-        nickname_form.account_id.data = selected_account['id']
+        if selected_account is not None:
+            nickname_form.account_id.data = selected_account['id']
+
+        if not transfer_form.source_account_id.data:
+            transfer_form.source_account_id.data = selected_account['id'] if selected_account else accounts[0]['id']
+
+        transfer_source_id = int(transfer_form.source_account_id.data or 0)
+        transfer_source_account = account_lookup.get(transfer_source_id) or accounts[0]
 
         if request.method == 'POST' and 'submit_transfer' in request.form and transfer_form.validate():
+            source_account_id = int(transfer_form.source_account_id.data or 0)
+            source_account = account_lookup.get(source_account_id)
             recipient_account = cur.execute(
                 '''
                 SELECT "Account ID", "BalanceCents"
@@ -240,15 +248,17 @@ def customer_home() -> str:
                 (transfer_form.recipient_account_id.data,)
             ).fetchone()
 
-            source_balance_cents = int(selected_account['balance_cents'] or 0)
+            source_balance_cents = int(source_account['balance_cents'] or 0) if source_account else 0
             transfer_amount = float(transfer_form.amount.data or 0)
             transfer_amount_cents = int(round(transfer_amount * 100))
 
             if transfer_amount <= 0:
                 transfer_form.amount.errors.append('Transfer amount must be greater than 0.')
+            elif not source_account:
+                transfer_form.source_account_id.errors.append('Source account not found.')
             elif not recipient_account:
                 transfer_form.recipient_account_id.errors.append('Recipient account not found.')
-            elif recipient_account[0] == selected_account['id']:
+            elif recipient_account[0] == source_account['id']:
                 transfer_form.recipient_account_id.errors.append('Cannot transfer to the same account.')
             elif transfer_amount_cents > source_balance_cents:
                 transfer_form.amount.errors.append('Insufficient funds for this transfer.')
@@ -258,11 +268,11 @@ def customer_home() -> str:
                 recipient_after_cents = recipient_before_cents + transfer_amount_cents
                 now = datetime.utcnow().isoformat(timespec='seconds')
                 source_details = f'Transfer to account #{recipient_account[0]}'
-                recipient_details = f'Transfer from account #{selected_account["id"]}'
+                recipient_details = f'Transfer from account #{source_account["id"]}'
 
                 cur.execute(
                     'UPDATE Account SET "BalanceCents" = ? WHERE "Account ID" = ?',
-                    (source_after_cents, selected_account['id'])
+                    (source_after_cents, source_account['id'])
                 )
                 cur.execute(
                     'UPDATE Account SET "BalanceCents" = ? WHERE "Account ID" = ?',
@@ -271,7 +281,7 @@ def customer_home() -> str:
 
                 cur.execute(
                     'INSERT INTO "Transaction" ("Account ID", "Transaction Type", "AmountCents", "Time", "Details") VALUES (?, ?, ?, ?, ?)',
-                    (selected_account['id'], 'transfer', transfer_amount_cents, now, source_details)
+                    (source_account['id'], 'transfer', transfer_amount_cents, now, source_details)
                 )
                 cur.execute(
                     'INSERT INTO "Transaction" ("Account ID", "Transaction Type", "AmountCents", "Time", "Details") VALUES (?, ?, ?, ?, ?)',
@@ -281,30 +291,31 @@ def customer_home() -> str:
                 con.commit()
                 con.sync()
                 flash('Transfer completed successfully.')
-                return redirect(url_for('customer_home', account_id=selected_account['id']))
+                return redirect(url_for('customer_home', account_id=source_account['id']))
 
-        transactions = cur.execute(
-            '''
-            SELECT "Transaction ID", "Transaction Type", "AmountCents", "Time", "Details"
-            FROM "Transaction"
-            WHERE "Account ID" = ?
-            ORDER BY "Transaction ID" DESC
-            LIMIT 25
-            ''',
-            (selected_account_id,)
-        ).fetchall()
+        if selected_account is not None:
+            transactions = cur.execute(
+                '''
+                SELECT "Transaction ID", "Transaction Type", "AmountCents", "Time", "Details"
+                FROM "Transaction"
+                WHERE "Account ID" = ?
+                ORDER BY "Transaction ID" DESC
+                LIMIT 25
+                ''',
+                (selected_account_id,)
+            ).fetchall()
 
-        transactions = [
-            {
-                'id': row[0],
-                'transaction_type': row[1],
-                'amount_cents': int(row[2] or 0),
-                'amount': (int(row[2] or 0) / 100),
-                'time': row[3],
-                'details': row[4],
-            }
-            for row in transactions
-        ]
+            transactions = [
+                {
+                    'id': row[0],
+                    'transaction_type': row[1],
+                    'amount_cents': int(row[2] or 0),
+                    'amount': (int(row[2] or 0) / 100),
+                    'time': row[3],
+                    'details': row[4],
+                }
+                for row in transactions
+            ]
 
     return render_template(
         'customer_home.html',
@@ -313,6 +324,7 @@ def customer_home() -> str:
         savings_accounts=savings_accounts,
         other_accounts=other_accounts,
         selected_account=selected_account,
+        transfer_source_account=transfer_source_account,
         transactions=transactions,
         transfer_form=transfer_form,
         nickname_form=nickname_form,
