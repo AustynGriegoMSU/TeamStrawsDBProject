@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 {% block main %}
+    {% set call_or_visit_branch = 'Please call support or visit your nearest branch' %}
+
     <h2>Common Questions</h2>
 
     <section class="card-section">
@@ -18,13 +20,11 @@
         <h3>Account Requests</h3>
         <p><strong>How many requests can I submit?</strong><br>You can have one pending account request at a time.</p>
         <p><strong>How long does approval take?</strong><br>Requests are reviewed by an employee, usually during branch business hours.</p>
-        <p><strong>How do I request a withdrawal/spending limit increase?</strong><br>Please call support or visit your nearest branch to submit this request.</p>
-        <p><strong>How do I close my account?</strong><br>Please call support or visit your nearest branch, and a team member will help complete the closure process.</p>
+        <p><strong>How do I request a withdrawal/spending limit increase?</strong><br>{{ call_or_visit_branch }} to submit this request.</p>
+        <p><strong>How do I close my account?</strong><br>{{ call_or_visit_branch }}, and a team member will help complete the closure process.</p>
     </section>
 
     {% if not current_user.is_authenticated %}
-        <p>
-            <a href="{{ url_for('index') }}" class="button">Home</a>
-        </p>
+        <p><a href="{{ url_for('index') }}" class="button">Home</a></p>
     {% endif %}
 {% endblock %}

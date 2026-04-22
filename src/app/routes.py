@@ -343,7 +343,6 @@ def customer_home() -> str:
     return render_template(
         'customer_home.html',
         title='Customer Dashboard',
-        page_heading='Customer Dashboard',
         accounts=accounts,
         checking_accounts=checking_accounts,
         savings_accounts=savings_accounts,
