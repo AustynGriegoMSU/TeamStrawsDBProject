@@ -12,9 +12,10 @@ def password_matches(submitted_password: str, stored_password) -> bool:
         return False
 
     stored_text = stored_password.decode('utf-8') if isinstance(stored_password, bytes) else str(stored_password)
-    if stored_text.startswith('$2'):
-        return bcrypt.checkpw(submitted_password.encode('utf-8'), stored_text.encode('utf-8'))
-    return submitted_password == stored_text
+    # Only accept bcrypt hashes - reject plaintext passwords
+    if not stored_text.startswith('$2'):
+        return False
+    return bcrypt.checkpw(submitted_password.encode('utf-8'), stored_text.encode('utf-8'))
 
 
 def ensure_account_request_table() -> None:
