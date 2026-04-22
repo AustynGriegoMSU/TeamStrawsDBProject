@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block main %}
+    <h2>Common Questions</h2>
+
+    <section class="card-section">
+        <h3>Account Access</h3>
+        <p><strong>How do I log in?</strong><br>Use your username and password on the login page.</p>
+        <p><strong>I forgot my password. What should I do?</strong><br>Please contact your nearest branch or support for account verification and reset assistance.</p>
+    </section>
+
+    <section class="card-section">
+        <h3>Transfers</h3>
+        <p><strong>Why do I need to choose a source account?</strong><br>Transfers require you to pick which account to debit before submitting.</p>
+        <p><strong>Can I transfer to the same account?</strong><br>No. Transfers must go to a different recipient account number.</p>
+    </section>
+
+    <section class="card-section">
+        <h3>Account Requests</h3>
+        <p><strong>How many requests can I submit?</strong><br>You can have one pending account request at a time.</p>
+        <p><strong>How long does approval take?</strong><br>Requests are reviewed by an employee, usually during branch business hours.</p>
+        <p><strong>How do I request a withdrawal/spending limit increase?</strong><br>Please call support or visit your nearest branch to submit this request.</p>
+        <p><strong>How do I close my account?</strong><br>Please call support or visit your nearest branch, and a team member will help complete the closure process.</p>
+    </section>
+
+    {% if not current_user.is_authenticated %}
+        <p>
+            <a href="{{ url_for('index') }}" class="button">Home</a>
+        </p>
+    {% endif %}
+{% endblock %}

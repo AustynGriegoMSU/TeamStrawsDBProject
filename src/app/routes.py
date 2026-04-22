@@ -91,6 +91,11 @@ def contact() -> str:
 
     return render_template('contact.html', title='Contact Us', branches=branches)
 
+
+@app.route('/common-questions')
+def common_questions() -> str:
+    return render_template('common_questions.html', title='Common Questions')
+
 @app.route('/customer/home', methods=['GET', 'POST'])
 @login_required
 def customer_home() -> str:
@@ -337,6 +342,8 @@ def customer_home() -> str:
 
     return render_template(
         'customer_home.html',
+        title='Customer Dashboard',
+        page_heading='Customer Dashboard',
         accounts=accounts,
         checking_accounts=checking_accounts,
         savings_accounts=savings_accounts,

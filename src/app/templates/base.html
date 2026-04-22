@@ -7,10 +7,36 @@
 </head>
 <body>
 {% if current_user.is_authenticated %}
-    <a href="{{ url_for('signout') }}" class="signout-link">Sign Out</a>
+    <header class="top-nav-bar">
+        <div class="top-nav-title">
+            <span class="bank-name">Team Straws Banking</span>
+        </div>
+        <div class="top-nav-actions">
+            {% if request.endpoint == 'contact' %}
+                {% if current_user.role == 'employee' %}
+                    <a href="{{ url_for('employee_home') }}" class="top-nav-link">Home</a>
+                {% else %}
+                    <a href="{{ url_for('customer_home') }}" class="top-nav-link">Home</a>
+                {% endif %}
+            {% elif request.endpoint == 'common_questions' %}
+                {% if current_user.role == 'employee' %}
+                    <a href="{{ url_for('employee_home') }}" class="top-nav-link">Home</a>
+                {% else %}
+                    <a href="{{ url_for('customer_home') }}" class="top-nav-link">Home</a>
+                {% endif %}
+                <a href="{{ url_for('contact') }}" class="top-nav-link">Contact</a>
+            {% else %}
+                <a href="{{ url_for('contact') }}" class="top-nav-link">Contact</a>
+            {% endif %}
+            {% if request.endpoint != 'common_questions' %}
+                <a href="{{ url_for('common_questions') }}" class="top-nav-link">Common Questions</a>
+            {% endif %}
+            <a href="{{ url_for('signout') }}" class="signout-link">Sign Out</a>
+        </div>
+    </header>
 {% endif %}
 
-<main class="page-shell">
+<main class="page-shell{% if current_user.is_authenticated %} page-shell-auth{% endif %}">
 {% with messages = get_flashed_messages() %}
     {% if messages %}
         <section class="flash-stack" aria-live="polite">

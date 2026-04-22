@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block main %}
     <h2>Customer Dashboard</h2>
-    <p>Welcome, {{ current_user.name or current_user.username }}. View account details and review recent transactions.</p>
+    <p class="welcome-line">Welcome, {{ current_user.name or current_user.username }}. <br>View account details and review recent transactions.</p>
 
     {% if not accounts %}
         <p>No accounts are currently linked to your profile.</p>
