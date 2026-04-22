@@ -14,13 +14,13 @@
         <div class="top-nav-actions">
             {% if request.endpoint == 'contact' %}
                 {% if current_user.role == 'employee' %}
-                    <a href="{{ url_for('employee_home') }}" class="top-nav-link">Home</a>
+                    <a href="{{ url_for('employee_menu') }}" class="top-nav-link">Home</a>
                 {% else %}
                     <a href="{{ url_for('customer_home') }}" class="top-nav-link">Home</a>
                 {% endif %}
             {% elif request.endpoint == 'common_questions' %}
                 {% if current_user.role == 'employee' %}
-                    <a href="{{ url_for('employee_home') }}" class="top-nav-link">Home</a>
+                    <a href="{{ url_for('employee_menu') }}" class="top-nav-link">Home</a>
                 {% else %}
                     <a href="{{ url_for('customer_home') }}" class="top-nav-link">Home</a>
                 {% endif %}

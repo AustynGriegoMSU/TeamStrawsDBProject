@@ -359,7 +359,7 @@ def customer_home() -> str:
 
 @app.route('/employee/home', methods=['GET', 'POST'])
 @login_required
-def employee_home() -> str:
+def employee_menu() -> str:
     if getattr(current_user, 'role', None) != 'employee':
         flash('Employee access only.')
         return redirect(url_for('index'))
@@ -369,7 +369,7 @@ def employee_home() -> str:
     if request.method == 'POST':
         if not review_form.validate():
             flash('Could not process review action. Please try again.')
-            return redirect(url_for('employee_home'))
+            return redirect(url_for('employee_menu'))
 
         request_id = int(review_form.request_id.data)
         action = review_form.action.data.lower().strip()
@@ -432,7 +432,7 @@ def employee_home() -> str:
             else:
                 flash('Invalid action.')
 
-        return redirect(url_for('employee_home'))
+        return redirect(url_for('employee_menu'))
 
     requests = cur.execute(
         '''
@@ -458,7 +458,7 @@ def employee_home() -> str:
         for row in requests
     ]
 
-    return render_template('employee_home.html', requests=requests, review_form=review_form)
+    return render_template('employee_menu.html', requests=requests, review_form=review_form)
 
 # User signup
 @app.route('/users/signup', methods=['GET', 'POST'])
@@ -556,7 +556,7 @@ def login() -> str:
             flash('Logged in successfully.')
             if role == 'customer':
                 return redirect(url_for('customer_home'))
-            return redirect(url_for('employee_home'))
+            return redirect(url_for('employee_menu'))
         else:
             form.username.errors.append('Invalid username or password.')
     return render_template('login.html', form=form)
