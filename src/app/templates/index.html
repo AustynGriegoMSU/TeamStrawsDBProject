@@ -6,6 +6,7 @@
     </p>   
     <button type="button" class="button" data-target="{{ url_for('login') }}" onclick="simple_action(this.dataset.target)">Login</button>
     <button type="button" class="button" data-target="{{ url_for('signup') }}" onclick="simple_action(this.dataset.target)">Sign Up</button>
+    <button type="button" class="button" data-target="{{ url_for('contact') }}" onclick="simple_action(this.dataset.target)">Contact</button>
     <script type="text/javascript">
         function simple_action(target) {
             window.location = target

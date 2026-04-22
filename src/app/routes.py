@@ -70,6 +70,27 @@ ensure_account_nickname_column()
 def index() -> str:
     return render_template('index.html')
 
+
+@app.route('/contact')
+def contact() -> str:
+    branch_rows = cur.execute(
+        '''
+        SELECT "Name", "Address"
+        FROM Branch
+        ORDER BY "Branch ID" ASC
+        '''
+    ).fetchall()
+
+    branches = [
+        {
+            'name': row[0],
+            'address': row[1],
+        }
+        for row in branch_rows
+    ]
+
+    return render_template('contact.html', title='Contact Us', branches=branches)
+
 @app.route('/customer/home', methods=['GET', 'POST'])
 @login_required
 def customer_home() -> str:
@@ -164,14 +185,14 @@ def customer_home() -> str:
                 '''
                 SELECT "Request ID"
                 FROM AccountRequest
-                WHERE "Customer ID" = ? AND lower("Requested Type") = lower(?) AND "Status" = 'pending'
+                WHERE "Customer ID" = ? AND "Status" = 'pending'
                 LIMIT 1
                 ''',
-                (customer_id, new_account_form.requested_type.data)
+                (customer_id,)
             ).fetchone()
 
             if existing_pending:
-                flash('You already have a pending request for that account type.')
+                flash('You already have a pending account request. Please wait for review before submitting another.')
             else:
                 cur.execute(
                     'INSERT INTO AccountRequest ("Customer ID", "Requested Type", "Status", "Requested At") VALUES (?, ?, ?, ?)',
@@ -230,11 +251,8 @@ def customer_home() -> str:
         if selected_account is not None:
             nickname_form.account_id.data = selected_account['id']
 
-        if not transfer_form.source_account_id.data:
-            transfer_form.source_account_id.data = selected_account['id'] if selected_account else accounts[0]['id']
-
         transfer_source_id = int(transfer_form.source_account_id.data or 0)
-        transfer_source_account = account_lookup.get(transfer_source_id) or accounts[0]
+        transfer_source_account = account_lookup.get(transfer_source_id)
 
         if request.method == 'POST' and 'submit_transfer' in request.form and transfer_form.validate():
             source_account_id = int(transfer_form.source_account_id.data or 0)

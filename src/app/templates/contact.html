@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block main %}
+    <h2>Contact Us</h2>
+    <p>Need help with your account or requests? Reach out to our team.</p>
+
+    <section class="card-section">
+        <h3>Support Details</h3>
+        <p><strong>Phone:</strong> (555) 010-2211</p>
+        <p><strong>Email:</strong> support@teamstrawsbank.example</p>
+        <p><strong>Hours:</strong> Monday-Friday, 9:00 AM - 5:00 PM</p>
+    </section>
+
+    <section class="card-section">
+        <h3>Branch Locations</h3>
+        {% if branches %}
+            {% for branch in branches %}
+                <p><strong>{{ branch.name }}:</strong> {{ branch.address }}</p>
+            {% endfor %}
+        {% else %}
+            <p>No branch locations are available right now.</p>
+        {% endif %}
+    </section>
+
+    <p>
+        <a href="{{ url_for('index') }}" class="button">Home</a>
+    </p>
+{% endblock %}

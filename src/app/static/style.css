@@ -242,6 +242,18 @@ tbody tr:hover {
     background: #f8fbff;
 }
 
+.tx-amount {
+    font-weight: 700;
+}
+
+.tx-amount-positive {
+    color: #1f7a1f;
+}
+
+.tx-amount-negative {
+    color: #b42318;
+}
+
 .row-actions {
     display: flex;
     gap: 8px;

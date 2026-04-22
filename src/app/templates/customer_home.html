@@ -99,10 +99,15 @@
                             </thead>
                             <tbody>
                                 {% for tx in transactions %}
+                                    {% set tx_type = (tx.transaction_type or '')|lower %}
+                                    {% set is_credit = tx_type in ['deposit', 'credit', 'refund', 'interest'] %}
+                                    {% set is_debit = tx_type in ['withdrawal', 'transfer', 'debit', 'payment', 'fee'] %}
                                     <tr>
                                         <td>{{ tx.id }}</td>
                                         <td>{{ tx.transaction_type }}</td>
-                                        <td>${{ '%.2f'|format(tx.amount or 0) }}</td>
+                                        <td class="tx-amount {% if is_credit %}tx-amount-positive{% elif is_debit %}tx-amount-negative{% endif %}">
+                                            {% if is_credit %}+{% elif is_debit %}-{% endif %}${{ '%.2f'|format(tx.amount or 0) }}
+                                        </td>
                                         <td>{{ tx.details or '-' }}</td>
                                         <td>{{ tx.time }}</td>
                                     </tr>
@@ -130,8 +135,9 @@
                     <p>
                         <label for="source_account_id">Transfer From</label><br>
                         <select id="source_account_id" name="source_account_id">
+                            <option value="" disabled {% if not transfer_form.source_account_id.data %}selected{% endif %}>Please choose an account</option>
                             {% for account in accounts %}
-                                <option value="{{ account.id }}" data-balance="{{ '%.2f'|format(account.balance or 0) }}" {% if (transfer_form.source_account_id.data or accounts[0].id) == account.id %}selected{% endif %}>
+                                <option value="{{ account.id }}" data-balance="{{ '%.2f'|format(account.balance or 0) }}" {% if transfer_form.source_account_id.data == account.id %}selected{% endif %}>
                                     #{{ account.id }} · {{ account.nickname or account.account_type }} · ${{ '%.2f'|format(account.balance or 0) }}
                                 </option>
                             {% endfor %}
@@ -180,7 +186,9 @@
 
     <section class="card-section">
         <h3>Request New Account</h3>
-        <p>Choose an account type and submit. Note that user is limited to one pending request per account type. An employee must approve the request before the account is created.</p>
+        <p>Choose an account type and submit. You can only have one pending request at a time. An employee must approve the request before the account is created. <br>
+            Please call or visit your nearest branch if you need more help!
+        </p>
         <form action="{{ url_for('customer_home', account_id=selected_account.id if selected_account else None) }}" method="POST" novalidate>
             {{ new_account_form.hidden_tag() }}
             <p>
@@ -196,6 +204,7 @@
 
     <section class="card-section">
         <h3>Your Account Requests</h3>
+        <p> Status of your account requests, including: New accounts, account closures, withdrawal limit increases, and more.</p>
         {% if account_requests %}
             <div class="table-wrap">
                 <table>
