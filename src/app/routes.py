@@ -1,10 +1,14 @@
 from src.app import app, con, cur
 import bcrypt
+import time
 from datetime import datetime
-from flask import render_template, redirect, url_for, flash, Response, request
+from flask import render_template, redirect, url_for, flash, Response, request, session
 from flask_login import login_user, logout_user, login_required, current_user
 from src.app.models import User
 from src.app.forms import SignUpForm, LoginForm, TransferForm, AccountNicknameForm, NewAccountRequestForm, ReviewAccountRequestForm
+
+
+INACTIVITY_TIMEOUT_SECONDS = 120
 
 
 def password_matches(submitted_password: str, stored_password) -> bool:
@@ -64,6 +68,24 @@ def ensure_account_nickname_column() -> None:
 ensure_account_request_table()
 ensure_transaction_details_column()
 ensure_account_nickname_column()
+
+
+@app.before_request
+def enforce_inactivity_timeout():
+    if not current_user.is_authenticated:
+        return None
+
+    last_activity = session.get('last_activity_at')
+    now = int(time.time())
+
+    if last_activity is not None and (now - int(last_activity)) > INACTIVITY_TIMEOUT_SECONDS:
+        logout_user()
+        session.clear()
+        flash('You were signed out after 2 minutes of inactivity.')
+        return redirect(url_for('login'))
+
+    session['last_activity_at'] = now
+    return None
 
 @app.route('/')
 @app.route('/index')
@@ -554,6 +576,7 @@ def login() -> str:
                 last_name=row[2],
             )
             login_user(user)
+            session['last_activity_at'] = int(time.time())
             flash('Logged in successfully.')
             if role == 'customer':
                 return redirect(url_for('customer_home'))
@@ -567,5 +590,14 @@ def login() -> str:
 @login_required
 def signout() -> Response:
     logout_user()
+    session.clear()
     flash('You have been signed out.')
     return redirect(url_for('login'))
+
+
+@app.route('/users/session-close', methods=['POST'])
+@login_required
+def session_close() -> Response:
+    logout_user()
+    session.clear()
+    return Response(status=204)

@@ -54,6 +54,45 @@
 </button>
 
 <script>
+    {% if current_user.is_authenticated %}
+    (function () {
+        let isInAppNavigation = false;
+
+        document.addEventListener("click", function (event) {
+            const link = event.target.closest("a");
+            if (!link) {
+                return;
+            }
+
+            const target = (link.getAttribute("target") || "").toLowerCase();
+            const href = link.getAttribute("href") || "";
+            if (target === "_blank" || href.startsWith("mailto:") || href.startsWith("tel:")) {
+                return;
+            }
+
+            isInAppNavigation = true;
+        });
+
+        document.addEventListener("submit", function () {
+            isInAppNavigation = true;
+        }, true);
+
+        window.addEventListener("keydown", function (event) {
+            if (event.key === "F5" || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "r")) {
+                isInAppNavigation = true;
+            }
+        });
+
+        window.addEventListener("beforeunload", function () {
+            if (isInAppNavigation) {
+                return;
+            }
+
+            navigator.sendBeacon("{{ url_for('session_close') }}", new Blob([], { type: "application/octet-stream" }));
+        });
+    })();
+    {% endif %}
+
     (function () {
         const root = document.documentElement;
         const toggle = document.getElementById("theme-toggle");

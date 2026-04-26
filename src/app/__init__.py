@@ -1,12 +1,15 @@
 from flask import Flask
 from flask_login import LoginManager
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=2)
+app.config['SESSION_PERMANENT'] = False
 
 ## Database setup
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
