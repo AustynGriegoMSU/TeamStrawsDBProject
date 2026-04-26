@@ -18,11 +18,28 @@
 body {
     margin: 0;
     min-height: 100vh;
-    padding: 32px 20px;
+    padding: 32px 20px 72px;
     background: linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
     color: var(--text);
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.5;
+}
+
+html[data-theme="dark"] {
+    --bg: #101824;
+    --panel: #172334;
+    --text: #e7eef8;
+    --muted: #b5c3d6;
+    --border: #2b3d56;
+    --accent: #6aa4ff;
+    --accent-hover: #4b8cf2;
+    --danger: #ef6d69;
+    --danger-hover: #de504b;
+    --shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] body {
+    background: linear-gradient(180deg, #0c1521 0%, var(--bg) 100%);
 }
 
 .page-shell {
@@ -33,6 +50,12 @@ body {
     border: 1px solid var(--border);
     border-radius: 18px;
     box-shadow: var(--shadow);
+}
+
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3 {
+    color: #f1f6ff;
 }
 
 h1,
@@ -75,6 +98,19 @@ textarea {
     color: var(--text);
     font: inherit;
     transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+    background: #112033;
+}
+
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] select:focus,
+html[data-theme="dark"] textarea:focus {
+    background: #0f1d2f;
+    box-shadow: 0 0 0 4px rgba(106, 164, 255, 0.2);
 }
 
 input:focus,
@@ -127,10 +163,23 @@ input[type="submit"]:hover {
 .top-nav-bar {
     max-width: 720px;
     margin: 0 auto 10px;
+    padding: 6px 8px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 8px;
+    position: sticky;
+    top: 8px;
+    z-index: 1100;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(246, 250, 255, 0.9);
+    backdrop-filter: blur(4px);
+}
+
+html[data-theme="dark"] .top-nav-bar {
+    border-color: #334862;
+    background: rgba(16, 29, 46, 0.88);
 }
 
 .page-shell-auth {
@@ -208,6 +257,60 @@ span[style*="color:red"] {
     border: 1px solid var(--border);
     border-radius: 12px;
     background: #fbfdff;
+}
+
+html[data-theme="dark"] .card-section,
+html[data-theme="dark"] table,
+html[data-theme="dark"] .account-card {
+    background: #132236;
+}
+
+html[data-theme="dark"] .account-card:hover,
+html[data-theme="dark"] tbody tr:hover {
+    background: #1a2c44;
+}
+
+html[data-theme="dark"] .account-card-active {
+    background: linear-gradient(180deg, #16304f 0%, #1c3960 100%);
+}
+
+html[data-theme="dark"] th {
+    background: #1a2e48;
+    color: #e8f0fc;
+}
+
+html[data-theme="dark"] .flash-message {
+    border-color: #30517b;
+    background: #173256;
+    color: #dcedff;
+}
+
+.theme-toggle {
+    position: fixed;
+    right: 14px;
+    bottom: 12px;
+    z-index: 1200;
+    min-width: 64px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--text);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18);
+    transition: transform 0.12s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.theme-toggle:hover {
+    transform: translateY(-1px);
+    border-color: var(--accent);
+}
+
+html[data-theme="dark"] .theme-toggle {
+    background: #0f1d2f;
 }
 
 .card-section h3 {
@@ -332,7 +435,7 @@ tbody tr:hover {
 
 @media (max-width: 640px) {
     body {
-        padding: 20px 14px;
+        padding: 20px 14px 66px;
     }
 
     .page-shell {
@@ -363,5 +466,13 @@ tbody tr:hover {
 
     .transfer-grid {
         grid-template-columns: 1fr;
+    }
+
+    .theme-toggle {
+        right: 10px;
+        bottom: 10px;
+        min-width: 58px;
+        padding: 5px 9px;
+        font-size: 0.74rem;
     }
 }

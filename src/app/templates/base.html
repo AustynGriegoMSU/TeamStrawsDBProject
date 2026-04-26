@@ -48,5 +48,37 @@
 {% endwith %}
 {% block main %}{% endblock %}
 </main>
+
+<button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode" aria-pressed="false">
+    Dark
+</button>
+
+<script>
+    (function () {
+        const root = document.documentElement;
+        const toggle = document.getElementById("theme-toggle");
+        const stored = localStorage.getItem("theme");
+        const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+        function applyTheme(theme) {
+            root.setAttribute("data-theme", theme);
+            if (toggle) {
+                const isDark = theme === "dark";
+                toggle.textContent = isDark ? "Light" : "Dark";
+                toggle.setAttribute("aria-pressed", String(isDark));
+            }
+        }
+
+        applyTheme(stored || (prefersDark ? "dark" : "light"));
+
+        if (toggle) {
+            toggle.addEventListener("click", function () {
+                const nextTheme = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+                applyTheme(nextTheme);
+                localStorage.setItem("theme", nextTheme);
+            });
+        }
+    })();
+</script>
 </body>
 </html>
