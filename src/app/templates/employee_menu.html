@@ -1,7 +1,121 @@
 {% extends 'base.html' %}
 {% block main %}
-    <h2>Employee Dashboard</h2>
-    <p>Review customer account requests and approve or reject them.</p>
+    <h2>Employee Menu</h2>
+
+    <section class="card-section">
+        <h3>Customer Lookup</h3>
+        <form method="GET" action="{{ url_for('employee_menu') }}" style="display:flex; align-items:flex-end; gap:0.5rem;">
+            <div>
+                <label for="customer_id_input">Customer ID:</label>
+                <input id="customer_id_input" type="number" name="customer_id" min="1" placeholder="Enter customer ID" required>
+            </div>
+            <button type="submit">Look Up</button>
+        </form>
+        {% if lookup_customer %}
+            <p style="margin-top:1rem;"><strong>Customer Found: </strong> {{ lookup_customer.name }} ({{ lookup_customer.username }}, #{{ lookup_customer.id }})</p>
+        {% endif %}
+    </section>
+
+    {% if lookup_customer %}
+        <section class="card-section">
+            <h3>Accounts</h3>
+            {% if lookup_accounts %}
+                <div class="account-list">
+                    {% for acct in lookup_accounts %}
+                        <a href="{{ url_for('employee_menu', customer_id=lookup_customer.id, account_id=acct.id) }}"
+                           class="account-card{% if lookup_selected_account and lookup_selected_account.id == acct.id %} account-card-active{% endif %}">
+                            <strong>{{ acct.nickname or acct.account_type }}</strong>
+                            <span class="account-card-label">Account #{{ acct.id }}</span>
+                            <span>Balance: ${{ '%.2f' | format(acct.balance or 0) }}</span>
+                            <span>{{ acct.branch_name or 'Unknown Branch' }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+                {% if not lookup_selected_account %}
+                    <p style="margin-top:1rem;">Select an account to view transactions and manage deposits/withdrawals.</p>
+                {% endif %}
+            {% else %}
+                <p>No accounts linked to this customer.</p>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    {% if lookup_selected_account %}
+        <section class="card-section">
+            <h3>{{ lookup_selected_account.nickname or lookup_selected_account.account_type }} &mdash; Account #{{ lookup_selected_account.id }}</h3>
+            <p><strong>Balance:</strong> ${{ '%.2f' | format(lookup_selected_account.balance or 0) }}</p>
+            <p><strong>Branch:</strong> {{ lookup_selected_account.branch_name or 'Unknown Branch' }}</p>
+
+            <div class="row-actions" style="margin-top:1rem; gap:2rem; align-items:flex-start;">
+                <form method="POST" action="{{ url_for('employee_menu') }}">
+                    {{ transaction_form.csrf_token() }}
+                    <input type="hidden" name="account_id" value="{{ lookup_selected_account.id }}">
+                    <input type="hidden" name="customer_id" value="{{ lookup_customer.id }}">
+                    <input type="hidden" name="action" value="deposit">
+                    <label>Deposit Amount: <input type="number" name="amount" min="0.01" step="0.01" required></label>
+                    <button type="submit" name="submit_transaction" value="1">Deposit</button>
+                </form>
+                <form method="POST" action="{{ url_for('employee_menu') }}">
+                    {{ transaction_form.csrf_token() }}
+                    <input type="hidden" name="account_id" value="{{ lookup_selected_account.id }}">
+                    <input type="hidden" name="customer_id" value="{{ lookup_customer.id }}">
+                    <input type="hidden" name="action" value="withdraw">
+                    <label>Withdraw Amount: <input type="number" name="amount" min="0.01" step="0.01" required></label>
+                    <button type="submit" name="submit_transaction" value="1" class="danger-btn">Withdraw</button>
+                </form>
+            </div>
+        </section>
+
+        <section class="card-section">
+            <h3>Recent Transactions</h3>
+            {% if lookup_transactions %}
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Details</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for txn in lookup_transactions %}
+                                {% set tx_type = (txn.transaction_type or '')|lower %}
+                                {% set is_credit = tx_type in ['deposit', 'credit', 'refund', 'interest'] %}
+                                {% set is_debit = tx_type in ['withdrawal', 'transfer', 'debit', 'payment', 'fee'] %}
+                                <tr>
+                                    <td>{{ txn.id }}</td>
+                                    <td>{{ txn.transaction_type }}</td>
+                                    <td class="tx-amount {% if is_credit %}tx-amount-positive{% elif is_debit %}tx-amount-negative{% endif %}">
+                                        {% if is_credit %}+{% elif is_debit %}-{% endif %}${{ '%.2f' | format(txn.amount or 0) }}
+                                    </td>
+                                    <td>{{ txn.details or '-' }}</td>
+                                    <td>{{ txn.time }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p>No transactions for this account yet.</p>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    {% if lookup_selected_account.balance == 0 %}
+        <section class="card-section">
+            <h3>Close Account</h3>
+            <p>DANGER: Account can not be recovered once this is done! <br> Click the button below to permanently close this account upon request. <br> (Note: Account balance must be zero.)</p>
+            <form method="POST" action="{{ url_for('employee_menu') }}">
+                {{ transaction_form.csrf_token() }}
+                <input type="hidden" name="account_id" value="{{ lookup_selected_account.id }}">
+                <input type="hidden" name="customer_id" value="{{ lookup_customer.id }}">
+                <button type="submit" name="submit_close_account" value="1" class="danger-btn">Close Account</button>
+            </form>
+        </section>
+    {% endif %}
 
     <section class="card-section">
         <h3>Account Requests</h3>

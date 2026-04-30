@@ -43,3 +43,9 @@ class ReviewAccountRequestForm(FlaskForm):
     request_id = HiddenField(validators=[DataRequired()])
     action = HiddenField(validators=[DataRequired()])
     submit_review = SubmitField('Submit Review')
+
+class EmployeeTransactionForm(FlaskForm):
+    account_id = HiddenField(validators=[DataRequired()])
+    amount = FloatField('Amount', validators=[DataRequired(), NumberRange(min=0.01, message='Amount must be greater than 0.')])
+    action = HiddenField(validators=[DataRequired()])
+    submit_transaction = SubmitField('Submit')

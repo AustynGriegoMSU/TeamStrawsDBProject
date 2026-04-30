@@ -5,7 +5,7 @@ from datetime import datetime
 from flask import render_template, redirect, url_for, flash, Response, request, session
 from flask_login import login_user, logout_user, login_required, current_user
 from src.app.models import User
-from src.app.forms import SignUpForm, LoginForm, TransferForm, AccountNicknameForm, NewAccountRequestForm, ReviewAccountRequestForm
+from src.app.forms import SignUpForm, LoginForm, TransferForm, AccountNicknameForm, NewAccountRequestForm, ReviewAccountRequestForm, EmployeeTransactionForm
 
 
 INACTIVITY_TIMEOUT_SECONDS = 120
@@ -388,8 +388,93 @@ def employee_menu() -> str:
         return redirect(url_for('index'))
 
     review_form: ReviewAccountRequestForm = ReviewAccountRequestForm()
+    transaction_form: EmployeeTransactionForm = EmployeeTransactionForm()
 
-    if request.method == 'POST':
+    # --- Close Account ---
+    if request.method == 'POST' and 'submit_close_account' in request.form:
+        acct_id = request.form.get('account_id', '')
+        customer_id = request.form.get('customer_id', '')
+        
+        if acct_id.isdigit():
+            acct_id = int(acct_id)
+            acct_row = cur.execute(
+                'SELECT "Account ID", "BalanceCents" FROM Account WHERE "Account ID" = ?',
+                (acct_id,)
+            ).fetchone()
+            
+            if not acct_row:
+                flash('Account not found.')
+            elif int(acct_row[1] or 0) != 0:
+                flash('Account can only be closed if the balance is zero.')
+            else:
+                # Delete related transactions first
+                cur.execute('DELETE FROM "Transaction" WHERE "Account ID" = ?', (acct_id,))
+                # Then delete the account
+                cur.execute('DELETE FROM Account WHERE "Account ID" = ?', (acct_id,))
+                con.commit()
+                con.sync()
+                flash(f'Account #{acct_id} has been closed.')
+        
+        kwargs = {}
+        if customer_id.isdigit():
+            kwargs['customer_id'] = int(customer_id)
+        return redirect(url_for('employee_menu', **kwargs))
+
+    # --- Deposit / Withdraw ---
+    if request.method == 'POST' and 'submit_transaction' in request.form:
+        if transaction_form.validate():
+            acct_id = int(transaction_form.account_id.data)
+            txn_action = (transaction_form.action.data or '').lower().strip()
+            amount = float(transaction_form.amount.data or 0)
+            amount_cents = int(round(amount * 100))
+
+            acct_row = cur.execute(
+                'SELECT "Account ID", "BalanceCents" FROM Account WHERE "Account ID" = ?',
+                (acct_id,)
+            ).fetchone()
+
+            if not acct_row:
+                flash('Account not found.')
+            elif txn_action == 'deposit':
+                new_balance = int(acct_row[1] or 0) + amount_cents
+                employee_name = current_user.name
+                cur.execute('UPDATE Account SET "BalanceCents" = ? WHERE "Account ID" = ?', (new_balance, acct_id))
+                cur.execute(
+                    'INSERT INTO "Transaction" ("Account ID", "Transaction Type", "AmountCents", "Time", "Details") VALUES (?, ?, ?, ?, ?)',
+                    (acct_id, 'deposit', amount_cents, datetime.utcnow().isoformat(timespec='seconds'), f'Deposit by employee {employee_name}')
+                )
+                con.commit()
+                con.sync()
+                flash(f'Deposited ${amount:.2f} into account #{acct_id}.')
+            elif txn_action == 'withdraw':
+                current_balance = int(acct_row[1] or 0)
+                if amount_cents > current_balance:
+                    flash('Insufficient funds for this withdrawal.')
+                else:
+                    new_balance = current_balance - amount_cents
+                    employee_name = current_user.name
+                    cur.execute('UPDATE Account SET "BalanceCents" = ? WHERE "Account ID" = ?', (new_balance, acct_id))
+                    cur.execute(
+                        'INSERT INTO "Transaction" ("Account ID", "Transaction Type", "AmountCents", "Time", "Details") VALUES (?, ?, ?, ?, ?)',
+                        (acct_id, 'withdrawal', amount_cents, datetime.utcnow().isoformat(timespec='seconds'), f'Withdrawal by employee {employee_name}')
+                    )
+                    con.commit()
+                    con.sync()
+                    flash(f'Withdrew ${amount:.2f} from account #{acct_id}.')
+            else:
+                flash('Invalid transaction action.')
+        else:
+            flash('Invalid transaction form submission.')
+        acct_id_param = request.form.get('account_id', '')
+        customer_id_param = request.form.get('customer_id', '')
+        kwargs = {}
+        if acct_id_param.isdigit():
+            kwargs['account_id'] = int(acct_id_param)
+        if customer_id_param.isdigit():
+            kwargs['customer_id'] = int(customer_id_param)
+        return redirect(url_for('employee_menu', **kwargs))
+
+    if request.method == 'POST' and 'submit_transaction' not in request.form:
         if not review_form.validate():
             flash('Could not process review action. Please try again.')
             return redirect(url_for('employee_menu'))
@@ -481,7 +566,94 @@ def employee_menu() -> str:
         for row in requests
     ]
 
-    return render_template('employee_menu.html', requests=requests, review_form=review_form)
+    # --- Account lookup by Customer ID ---
+    lookup_customer_id = request.args.get('customer_id', type=int)
+    selected_account_id = request.args.get('account_id', type=int)
+    lookup_customer = None
+    lookup_accounts = []
+    lookup_selected_account = None
+    lookup_transactions = []
+
+    if lookup_customer_id is not None:
+        customer_row = cur.execute(
+            'SELECT "Customer ID", "First Name", "Last Name", "Username" FROM Customer WHERE "Customer ID" = ?',
+            (lookup_customer_id,)
+        ).fetchone()
+
+        if not customer_row:
+            flash('Customer not found.')
+        else:
+            lookup_customer = {
+                'id': customer_row[0],
+                'name': ' '.join(p for p in (customer_row[1], customer_row[2]) if p),
+                'username': customer_row[3],
+            }
+            acct_rows = cur.execute(
+                '''
+                SELECT a."Account ID", a."Account Type", a."BalanceCents", b."Name", a."Nickname"
+                FROM Account a
+                LEFT JOIN Branch b ON b."Branch ID" = a."Branch ID"
+                WHERE a."Customer ID" = ?
+                ORDER BY
+                    CASE lower(a."Account Type")
+                        WHEN 'checking' THEN 0
+                        WHEN 'savings' THEN 1
+                        ELSE 2
+                    END,
+                    a."Account ID" ASC
+                ''',
+                (lookup_customer_id,)
+            ).fetchall()
+            lookup_accounts = [
+                {
+                    'id': row[0],
+                    'account_type': row[1],
+                    'balance': (int(row[2] or 0) / 100),
+                    'branch_name': row[3],
+                    'nickname': row[4],
+                }
+                for row in acct_rows
+            ]
+
+            if selected_account_id is not None:
+                for acct in lookup_accounts:
+                    if acct['id'] == selected_account_id:
+                        lookup_selected_account = acct
+                        break
+                if lookup_selected_account is None:
+                    flash('That account does not belong to this customer.')
+                else:
+                    transaction_form.account_id.data = selected_account_id
+                    lookup_transactions = [
+                        {
+                            'id': row[0],
+                            'transaction_type': row[1],
+                            'amount': (int(row[2] or 0) / 100),
+                            'time': row[3],
+                            'details': row[4],
+                        }
+                        for row in cur.execute(
+                            '''
+                            SELECT "Transaction ID", "Transaction Type", "AmountCents", "Time", "Details"
+                            FROM "Transaction"
+                            WHERE "Account ID" = ?
+                            ORDER BY "Transaction ID" DESC
+                            LIMIT 25
+                            ''',
+                            (selected_account_id,)
+                        ).fetchall()
+                    ]
+
+    return render_template(
+        'employee_menu.html',
+        requests=requests,
+        review_form=review_form,
+        transaction_form=transaction_form,
+        lookup_customer=lookup_customer,
+        lookup_accounts=lookup_accounts,
+        lookup_selected_account=lookup_selected_account,
+        lookup_transactions=lookup_transactions,
+    )
 
 # User signup
 @app.route('/users/signup', methods=['GET', 'POST'])
