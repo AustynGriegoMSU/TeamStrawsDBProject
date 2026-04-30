@@ -128,7 +128,7 @@
 
         <section class="card-section">
             <h3>Transfer Money</h3>
-            <p>For this project flow, enter the recipient account number.</p>
+            <p>Please select funding account, recipient account and transfer amount.</p>
             <form action="{{ url_for('customer_home', account_id=selected_account.id if selected_account else None) }}" method="POST" novalidate>
                 {{ transfer_form.hidden_tag() }}
                 <div class="transfer-grid">

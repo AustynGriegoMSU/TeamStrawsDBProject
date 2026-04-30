@@ -8,7 +8,7 @@ from src.app.models import User
 from src.app.forms import SignUpForm, LoginForm, TransferForm, AccountNicknameForm, NewAccountRequestForm, ReviewAccountRequestForm, EmployeeTransactionForm
 
 
-INACTIVITY_TIMEOUT_SECONDS = 120
+INACTIVITY_TIMEOUT_SECONDS = 300
 
 
 def password_matches(submitted_password: str, stored_password) -> bool:
